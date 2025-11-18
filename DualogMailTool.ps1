@@ -1174,81 +1174,98 @@ function Start-ImapBackup {
     Write-Host ""
     Write-Host "This tool will trigger a backup of the Dualog IMAP database." -ForegroundColor White
     Write-Host ""
+    Write-Host "The script will:" -ForegroundColor Cyan
+    Write-Host "  1. Connect to the IMAP server at 127.0.0.1:4535" -ForegroundColor White
+    Write-Host "  2. Send the backup command: backup 0" -ForegroundColor White
+    Write-Host "  3. Log all activity to C:\WebmailLogs" -ForegroundColor White
+    Write-Host ""
 
-    # Get backup folder from registry or use default
-    $backupFolder = "C:\DualogBackup\IMAP"
+    $null = Read-Host "Press Enter to proceed with backup"
+
+    Write-Host "`nConnecting to IMAP server at 127.0.0.1:4535..." -ForegroundColor Cyan
+    Write-Log "Connecting to 127.0.0.1:4535 to trigger backup" "INFO"
 
     try {
-        $regPath = "HKLM:\SOFTWARE\Wow6432Node\Dualog\DGS"
-        if (Test-Path $regPath) {
-            $regBackup = (Get-ItemProperty -Path $regPath -Name "ImapBackupFolder" -ErrorAction SilentlyContinue).ImapBackupFolder
-            if (-not [string]::IsNullOrWhiteSpace($regBackup)) {
-                $backupFolder = $regBackup
+        # Create TCP client connection
+        $tcpClient = New-Object System.Net.Sockets.TcpClient
+        $tcpClient.Connect("127.0.0.1", 4535)
+
+        if (-not $tcpClient.Connected) {
+            throw "Failed to connect to IMAP server"
+        }
+
+        Write-Host "Connected successfully!" -ForegroundColor Green
+        Write-Log "Successfully connected to 127.0.0.1:4535" "SUCCESS"
+
+        # Get network stream for reading/writing
+        $stream = $tcpClient.GetStream()
+        $reader = New-Object System.IO.StreamReader($stream)
+        $writer = New-Object System.IO.StreamWriter($stream)
+        $writer.AutoFlush = $true
+
+        # Read initial greeting/response
+        Start-Sleep -Milliseconds 500
+        while ($stream.DataAvailable) {
+            $line = $reader.ReadLine()
+            if ($line) {
+                Write-Host $line -ForegroundColor Gray
+                Write-Log "Server greeting: $line" "INFO"
             }
         }
-    } catch {
-        # Use default
-    }
 
-    Write-Host "Backup location: $backupFolder" -ForegroundColor Cyan
-    Write-Host ""
+        # Send backup command
+        $command = "backup 0"
+        Write-Host "`nSending command: $command" -ForegroundColor Cyan
+        Write-Log "Sending command: $command" "INFO"
+        $writer.WriteLine($command)
 
-    $customPath = Read-Host "Press Enter to use default location, or enter custom backup path"
-    if (-not [string]::IsNullOrWhiteSpace($customPath)) {
-        $backupFolder = $customPath
-    }
+        # Wait for response
+        Start-Sleep -Milliseconds 500
 
-    # Create backup folder if it doesn't exist
-    if (-not (Test-Path $backupFolder)) {
-        try {
-            New-Item -ItemType Directory -Path $backupFolder -Force | Out-Null
-            Write-Host "Created backup folder: $backupFolder" -ForegroundColor Green
-        } catch {
-            Write-Log "Failed to create backup folder: $($_.Exception.Message)" "ERROR"
-            Write-Host "Error creating backup folder: $($_.Exception.Message)" -ForegroundColor Red
-            $null = Read-Host "Press Enter to return to menu"
-            return
-        }
-    }
+        # Read and display response
+        Write-Host "`n--- Server Response ---" -ForegroundColor Yellow
+        $responseReceived = $false
 
-    Write-Host "`nStarting IMAP backup..." -ForegroundColor Cyan
-    Write-Log "Triggering IMAP backup to: $backupFolder" "INFO"
-
-    try {
-        # Call expdp or backup utility
-        # This is a placeholder - adjust based on actual Dualog backup mechanism
-        $timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
-        $backupFile = Join-Path $backupFolder "IMAP_Backup_$timestamp.dmp"
-
-        Write-Host "Backup file: $backupFile" -ForegroundColor White
-        Write-Host ""
-        Write-Host "Executing backup..." -ForegroundColor Cyan
-
-        # Example using Oracle expdp (adjust as needed for your environment)
-        $username = "g4vessel"
-        $password = Get-DatabasePasswordFromRegistry
-
-        if ($null -eq $password) {
-            Write-Log "Cannot proceed without database password" "ERROR"
-            $null = Read-Host "Press Enter to return to menu"
-            return
+        while ($stream.DataAvailable) {
+            $line = $reader.ReadLine()
+            if ($line) {
+                Write-Host $line -ForegroundColor Green
+                Write-Log "Server response: $line" "INFO"
+                $responseReceived = $true
+            }
         }
 
-        Write-Host "This feature requires Oracle Data Pump utilities." -ForegroundColor Yellow
-        Write-Host "Please ensure expdp is available in your PATH." -ForegroundColor Yellow
-        Write-Host ""
+        if (-not $responseReceived) {
+            Write-Host "No response received from server" -ForegroundColor Yellow
+            Write-Log "No response received from server" "WARNING"
+        }
 
-        Write-Log "IMAP backup completed" "SUCCESS"
-        Write-Host "Backup process initiated. Check the backup folder for results." -ForegroundColor Green
+        Write-Host "--- End Response ---" -ForegroundColor Yellow
+        Write-Log "Backup command completed" "SUCCESS"
+
+        # Wait for user
+        Write-Host ""
+        $null = Read-Host "Press Enter to return to menu"
+
+        # Cleanup
+        $writer.Close()
+        $reader.Close()
+        $stream.Close()
+        $tcpClient.Close()
+
+        Write-Log "Connection closed successfully" "INFO"
 
     } catch {
-        Write-Log "Error during backup: $($_.Exception.Message)" "ERROR"
-        Write-Host "`nError during backup:" -ForegroundColor Red
+        Write-Log "Error communicating with IMAP server: $($_.Exception.Message)" "ERROR"
+        Write-Host "`nError connecting to IMAP server:" -ForegroundColor Red
         Write-Host $_.Exception.Message -ForegroundColor Red
+        Write-Host ""
+        Write-Host "Please ensure:" -ForegroundColor Yellow
+        Write-Host "  - The IMAP server is running" -ForegroundColor White
+        Write-Host "  - Port 4535 is accessible on 127.0.0.1" -ForegroundColor White
+        Write-Host ""
+        $null = Read-Host "Press Enter to return to menu"
     }
-
-    Write-Host ""
-    $null = Read-Host "Press Enter to return to menu"
 }
 
 # Function to Trigger Dualog IMAP Restore
@@ -1274,72 +1291,114 @@ function Start-ImapRestore {
         return
     }
 
-    # Get backup folder
-    $backupFolder = "C:\DualogBackup\IMAP"
+    # Prompt user for backup file location
+    Write-Host "`n=== Backup File Location ===" -ForegroundColor Yellow
+    Write-Host ""
+    $backupFilePath = Read-Host "Enter the full IMAP location path of the Dualog backup file"
+
+    if ([string]::IsNullOrWhiteSpace($backupFilePath)) {
+        Write-Log "No backup file path provided" "WARNING"
+        Write-Host "Backup file path cannot be empty!" -ForegroundColor Red
+        $null = Read-Host "Press Enter to return to menu"
+        return
+    }
+
+    # Validate that the file exists
+    if (-not (Test-Path $backupFilePath)) {
+        Write-Log "Backup file not found: $backupFilePath" "ERROR"
+        Write-Host "Error: Backup file not found at the specified location!" -ForegroundColor Red
+        Write-Host "Path: $backupFilePath" -ForegroundColor Yellow
+        $null = Read-Host "Press Enter to return to menu"
+        return
+    }
+
+    Write-Host "`nSelected backup file: $backupFilePath" -ForegroundColor Green
+    Write-Log "User selected backup file: $backupFilePath" "INFO"
+
+    Write-Host "`nConnecting to IMAP server at 127.0.0.1:4535..." -ForegroundColor Cyan
+    Write-Log "Connecting to 127.0.0.1:4535 to trigger restore" "INFO"
 
     try {
-        $regPath = "HKLM:\SOFTWARE\Wow6432Node\Dualog\DGS"
-        if (Test-Path $regPath) {
-            $regBackup = (Get-ItemProperty -Path $regPath -Name "ImapBackupFolder" -ErrorAction SilentlyContinue).ImapBackupFolder
-            if (-not [string]::IsNullOrWhiteSpace($regBackup)) {
-                $backupFolder = $regBackup
+        # Create TCP client connection
+        $tcpClient = New-Object System.Net.Sockets.TcpClient
+        $tcpClient.Connect("127.0.0.1", 4535)
+
+        if (-not $tcpClient.Connected) {
+            throw "Failed to connect to IMAP server"
+        }
+
+        Write-Host "Connected successfully!" -ForegroundColor Green
+        Write-Log "Successfully connected to 127.0.0.1:4535" "SUCCESS"
+
+        # Get network stream for reading/writing
+        $stream = $tcpClient.GetStream()
+        $reader = New-Object System.IO.StreamReader($stream)
+        $writer = New-Object System.IO.StreamWriter($stream)
+        $writer.AutoFlush = $true
+
+        # Read initial greeting/response
+        Start-Sleep -Milliseconds 500
+        while ($stream.DataAvailable) {
+            $line = $reader.ReadLine()
+            if ($line) {
+                Write-Host $line -ForegroundColor Gray
+                Write-Log "Server greeting: $line" "INFO"
             }
         }
-    } catch {
-        # Use default
-    }
 
-    Write-Host "`nBackup location: $backupFolder" -ForegroundColor Cyan
+        # Send import command with backup file location
+        $command = "import 0 $backupFilePath"
+        Write-Host "`nSending command: $command" -ForegroundColor Cyan
+        Write-Log "Sending command: $command" "INFO"
+        $writer.WriteLine($command)
 
-    if (Test-Path $backupFolder) {
-        # List available backup files
-        $backupFiles = Get-ChildItem -Path $backupFolder -Filter "*.dmp" | Sort-Object LastWriteTime -Descending
+        # Wait for response
+        Start-Sleep -Milliseconds 500
 
-        if ($backupFiles.Count -eq 0) {
-            Write-Host "No backup files found in $backupFolder" -ForegroundColor Red
-            Write-Log "No backup files found" "ERROR"
-            $null = Read-Host "Press Enter to return to menu"
-            return
+        # Read and display response
+        Write-Host "`n--- Server Response ---" -ForegroundColor Yellow
+        $responseReceived = $false
+
+        while ($stream.DataAvailable) {
+            $line = $reader.ReadLine()
+            if ($line) {
+                Write-Host $line -ForegroundColor Green
+                Write-Log "Server response: $line" "INFO"
+                $responseReceived = $true
+            }
         }
 
-        Write-Host "`nAvailable backups:" -ForegroundColor Yellow
-        for ($i = 0; $i -lt [Math]::Min(10, $backupFiles.Count); $i++) {
-            Write-Host "  $($i+1). $($backupFiles[$i].Name) - $($backupFiles[$i].LastWriteTime)" -ForegroundColor White
+        if (-not $responseReceived) {
+            Write-Host "No response received from server" -ForegroundColor Yellow
+            Write-Log "No response received from server" "WARNING"
         }
 
+        Write-Host "--- End Response ---" -ForegroundColor Yellow
+        Write-Log "Restore command completed" "SUCCESS"
+
+        # Wait for user
         Write-Host ""
-        $selection = Read-Host "Select backup file number (or press Enter to cancel)"
+        $null = Read-Host "Press Enter to return to menu"
 
-        if ([string]::IsNullOrWhiteSpace($selection)) {
-            Write-Host "Operation cancelled." -ForegroundColor Yellow
-            $null = Read-Host "Press Enter to return to menu"
-            return
-        }
+        # Cleanup
+        $writer.Close()
+        $reader.Close()
+        $stream.Close()
+        $tcpClient.Close()
 
-        $index = [int]$selection - 1
-        if ($index -ge 0 -and $index -lt $backupFiles.Count) {
-            $backupFile = $backupFiles[$index].FullName
-            Write-Host "`nSelected backup: $backupFile" -ForegroundColor Cyan
-            Write-Log "Restoring from backup: $backupFile" "INFO"
+        Write-Log "Connection closed successfully" "INFO"
 
-            Write-Host ""
-            Write-Host "This feature requires Oracle Data Pump utilities." -ForegroundColor Yellow
-            Write-Host "Please ensure impdp is available in your PATH." -ForegroundColor Yellow
-            Write-Host ""
-
-            Write-Host "Restore process would be initiated here." -ForegroundColor Green
-            Write-Log "IMAP restore completed" "SUCCESS"
-
-        } else {
-            Write-Host "Invalid selection." -ForegroundColor Red
-        }
-    } else {
-        Write-Host "Backup folder not found: $backupFolder" -ForegroundColor Red
-        Write-Log "Backup folder not found" "ERROR"
+    } catch {
+        Write-Log "Error communicating with IMAP server: $($_.Exception.Message)" "ERROR"
+        Write-Host "`nError connecting to IMAP server:" -ForegroundColor Red
+        Write-Host $_.Exception.Message -ForegroundColor Red
+        Write-Host ""
+        Write-Host "Please ensure:" -ForegroundColor Yellow
+        Write-Host "  - The IMAP server is running" -ForegroundColor White
+        Write-Host "  - Port 4535 is accessible on 127.0.0.1" -ForegroundColor White
+        Write-Host ""
+        $null = Read-Host "Press Enter to return to menu"
     }
-
-    Write-Host ""
-    $null = Read-Host "Press Enter to return to menu"
 }
 
 # Function to test Dualog Shore Gateway connectivity
@@ -1523,8 +1582,8 @@ function Show-ImapServerToolMenu {
     Write-Host "  1. Telnet to Dualog local IMAP/SMTP Server" -ForegroundColor White
     Write-Host "  2. Telnet to Dualog Shore Gateway" -ForegroundColor White
     Write-Host "  3. Change Dualog IMAP log level" -ForegroundColor White
-    Write-Host "  4. Trigger Dualog IMAP Backup (Work in progress)" -ForegroundColor DarkGray
-    Write-Host "  5. Trigger Dualog IMAP Restore (Work in progress)" -ForegroundColor DarkGray
+    Write-Host "  4. Trigger Dualog IMAP Backup" -ForegroundColor White
+    Write-Host "  5. Trigger Dualog IMAP Restore" -ForegroundColor White
     Write-Host "  6. Large Files `& Attachments Finder" -ForegroundColor White
     Write-Host ""
     Write-Host "  B. Back to Main Menu" -ForegroundColor Yellow
