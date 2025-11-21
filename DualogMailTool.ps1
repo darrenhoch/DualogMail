@@ -39,6 +39,46 @@ function Initialize-Logging {
     return $true
 }
 
+# Function to check if running as Administrator
+function Test-AdminPrivileges {
+    $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+    return $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+# Function to elevate to Administrator
+function Request-AdminElevation {
+    param(
+        [string]$OptionNumber = ""
+    )
+
+    if (-not (Test-AdminPrivileges)) {
+        Write-Host ""
+        Write-Host "This operation requires Administrator privileges." -ForegroundColor Yellow
+        Write-Host "Attempting to restart with elevated privileges..." -ForegroundColor Cyan
+        Write-Host ""
+        Start-Sleep -Seconds 2
+
+        # Build the command to re-run the script with the option parameter
+        $scriptPath = $PSCommandPath
+        if ($OptionNumber) {
+            # Create a relaunch script that will auto-select the option
+            $arguments = "-NoProfile -ExecutionPolicy Bypass -Command `"& {. '$scriptPath' | Out-Null; `$global:autoSelectOption='$OptionNumber'}`""
+        } else {
+            $arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`""
+        }
+
+        try {
+            Start-Process powershell.exe -ArgumentList $arguments -Verb RunAs -Wait
+            exit
+        } catch {
+            Write-Host "Failed to elevate privileges. Please run PowerShell as Administrator manually." -ForegroundColor Red
+            $null = Read-Host "Press Enter to return to menu"
+            return $false
+        }
+    }
+    return $true
+}
+
 # Function to get database password from registry
 function Get-DatabasePasswordFromRegistry {
     Write-Host "Retrieving database password from registry..." -ForegroundColor Yellow
@@ -1573,6 +1613,273 @@ function Start-TelnetToShoreGateway {
 }
 
 # IMAP Server Tool Menu
+function Enable-ImapProtocol {
+    Write-Host "`n============================================================" -ForegroundColor Cyan
+    Write-Host "             Enable IMAP Protocol                            " -ForegroundColor Cyan
+    Write-Host "============================================================" -ForegroundColor Cyan
+
+    Write-Log "Starting Enable IMAP Protocol" "INFO"
+
+    # Check if running as Administrator, if not, request elevation
+    if (-not (Test-AdminPrivileges)) {
+        Request-AdminElevation -OptionNumber "7"
+        return
+    }
+
+    Write-Host "`n=== IMAP Protocol Configuration ===" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "This tool will enable the IMAP Protocol logging by:" -ForegroundColor White
+    Write-Host ""
+    Write-Host "1. Registry Location:" -ForegroundColor Cyan
+    Write-Host "   Computer\HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\DUALOG\ImapServer" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "2. Action:" -ForegroundColor Cyan
+    Write-Host "   Create a string called 'LogProtocol' (if it doesn't exist)" -ForegroundColor Gray
+    Write-Host "   Set the value to 'true'" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "3. Service Restart:" -ForegroundColor Cyan
+    Write-Host "   The 'Dualogimap' service will be restarted" -ForegroundColor Gray
+    Write-Host ""
+
+    $confirm = Read-Host "Do you want to continue? (yes/no)"
+
+    if ($confirm.ToLower() -ne "yes") {
+        Write-Host "`nOperation cancelled." -ForegroundColor Yellow
+        Write-Log "Enable IMAP Protocol operation cancelled by user" "INFO"
+        $null = Read-Host "Press Enter to return to menu"
+        return
+    }
+
+    Write-Host ""
+    Write-Host "Proceeding with IMAP Protocol enablement..." -ForegroundColor Cyan
+    Write-Log "Proceeding with Enable IMAP Protocol" "INFO"
+
+    try {
+        # Define registry path and values
+        $regPath = "HKLM:\SOFTWARE\WOW6432Node\DUALOG\ImapServer"
+        $regProperty = "LogProtocol"
+        $regValue = "true"
+
+        Write-Host ""
+        Write-Host "Opening registry location..." -ForegroundColor Cyan
+        Write-Log "Accessing registry path: $regPath" "INFO"
+
+        # Check if registry path exists
+        if (-not (Test-Path $regPath)) {
+            Write-Host "Registry path not found. Creating path: $regPath" -ForegroundColor Yellow
+            Write-Log "Creating registry path: $regPath" "INFO"
+            New-Item -Path $regPath -Force | Out-Null
+        }
+
+        # Check if property exists
+        $existingProperty = Get-ItemProperty -Path $regPath -Name $regProperty -ErrorAction SilentlyContinue
+
+        if ($existingProperty) {
+            Write-Host "Found existing 'LogProtocol' property. Current value: $($existingProperty.LogProtocol)" -ForegroundColor Gray
+            Write-Log "Existing LogProtocol property found with value: $($existingProperty.LogProtocol)" "INFO"
+        } else {
+            Write-Host "Property 'LogProtocol' does not exist. Creating it..." -ForegroundColor Cyan
+            Write-Log "Creating new LogProtocol property" "INFO"
+        }
+
+        # Set the registry value
+        Set-ItemProperty -Path $regPath -Name $regProperty -Value $regValue -Type String -Force
+        Write-Host "Successfully set 'LogProtocol' to 'true'" -ForegroundColor Green
+        Write-Log "Successfully set LogProtocol to true" "INFO"
+
+        Write-Host ""
+        Write-Host "Restarting Dualogimap service..." -ForegroundColor Cyan
+        Write-Log "Attempting to restart Dualogimap service" "INFO"
+
+        # Restart the Dualogimap service
+        $service = Get-Service -Name "Dualogimap" -ErrorAction SilentlyContinue
+
+        if ($service) {
+            Write-Host "Service found. Current status: $($service.Status)" -ForegroundColor Gray
+
+            # Stop the service
+            if ($service.Status -eq "Running") {
+                Write-Host "Stopping service..." -ForegroundColor Cyan
+                Stop-Service -Name "Dualogimap" -Force
+                Write-Log "Dualogimap service stopped" "INFO"
+
+                # Wait for service to stop
+                Start-Sleep -Seconds 2
+            }
+
+            # Start the service
+            Write-Host "Starting service..." -ForegroundColor Cyan
+            Start-Service -Name "Dualogimap"
+            Write-Log "Dualogimap service started" "INFO"
+
+            # Verify service status
+            Start-Sleep -Seconds 2
+            $updatedService = Get-Service -Name "Dualogimap"
+
+            if ($updatedService.Status -eq "Running") {
+                Write-Host "Service restarted successfully. Current status: $($updatedService.Status)" -ForegroundColor Green
+                Write-Log "Dualogimap service restarted successfully" "INFO"
+            } else {
+                Write-Host "Service status: $($updatedService.Status)" -ForegroundColor Yellow
+                Write-Log "Dualogimap service status after restart: $($updatedService.Status)" "WARNING"
+            }
+        } else {
+            Write-Host "Warning: Dualogimap service not found." -ForegroundColor Yellow
+            Write-Log "Dualogimap service not found" "WARNING"
+        }
+
+        Write-Host ""
+        Write-Host "========================================" -ForegroundColor Green
+        Write-Host "IMAP Protocol enablement completed!" -ForegroundColor Green
+        Write-Host "========================================" -ForegroundColor Green
+        Write-Log "Enable IMAP Protocol operation completed successfully" "INFO"
+
+    } catch {
+        Write-Log "Error enabling IMAP Protocol: $($_.Exception.Message)" "ERROR"
+        Write-Host ""
+        Write-Host "Error occurred during IMAP Protocol enablement:" -ForegroundColor Red
+        Write-Host $_.Exception.Message -ForegroundColor Red
+        Write-Host ""
+        Write-Host "Please ensure you have Administrator privileges." -ForegroundColor Yellow
+        Write-Log "Enable IMAP Protocol operation failed" "ERROR"
+    }
+
+    $null = Read-Host "Press Enter to return to menu"
+}
+
+function Disable-ImapProtocol {
+    Write-Host "`n============================================================" -ForegroundColor Cyan
+    Write-Host "             Disable IMAP Protocol                           " -ForegroundColor Cyan
+    Write-Host "============================================================" -ForegroundColor Cyan
+
+    Write-Log "Starting Disable IMAP Protocol" "INFO"
+
+    # Check if running as Administrator, if not, request elevation
+    if (-not (Test-AdminPrivileges)) {
+        Request-AdminElevation -OptionNumber "8"
+        return
+    }
+
+    Write-Host "`n=== IMAP Protocol Configuration ===" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "This tool will disable the IMAP Protocol logging by:" -ForegroundColor White
+    Write-Host ""
+    Write-Host "1. Registry Location:" -ForegroundColor Cyan
+    Write-Host "   Computer\HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\DUALOG\ImapServer" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "2. Action:" -ForegroundColor Cyan
+    Write-Host "   Set 'LogProtocol' value to 'false'" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "3. Service Restart:" -ForegroundColor Cyan
+    Write-Host "   The 'Dualogimap' service will be restarted" -ForegroundColor Gray
+    Write-Host ""
+
+    $confirm = Read-Host "Do you want to continue? (yes/no)"
+
+    if ($confirm.ToLower() -ne "yes") {
+        Write-Host "`nOperation cancelled." -ForegroundColor Yellow
+        Write-Log "Disable IMAP Protocol operation cancelled by user" "INFO"
+        $null = Read-Host "Press Enter to return to menu"
+        return
+    }
+
+    Write-Host ""
+    Write-Host "Proceeding with IMAP Protocol disablement..." -ForegroundColor Cyan
+    Write-Log "Proceeding with Disable IMAP Protocol" "INFO"
+
+    try {
+        # Define registry path and values
+        $regPath = "HKLM:\SOFTWARE\WOW6432Node\DUALOG\ImapServer"
+        $regProperty = "LogProtocol"
+        $regValue = "false"
+
+        Write-Host ""
+        Write-Host "Opening registry location..." -ForegroundColor Cyan
+        Write-Log "Accessing registry path: $regPath" "INFO"
+
+        # Check if registry path exists
+        if (-not (Test-Path $regPath)) {
+            Write-Host "Registry path not found. Creating path: $regPath" -ForegroundColor Yellow
+            Write-Log "Creating registry path: $regPath" "INFO"
+            New-Item -Path $regPath -Force | Out-Null
+        }
+
+        # Check if property exists
+        $existingProperty = Get-ItemProperty -Path $regPath -Name $regProperty -ErrorAction SilentlyContinue
+
+        if ($existingProperty) {
+            Write-Host "Found existing 'LogProtocol' property. Current value: $($existingProperty.LogProtocol)" -ForegroundColor Gray
+            Write-Log "Existing LogProtocol property found with value: $($existingProperty.LogProtocol)" "INFO"
+        } else {
+            Write-Host "Property 'LogProtocol' does not exist. Creating it..." -ForegroundColor Cyan
+            Write-Log "Creating new LogProtocol property" "INFO"
+        }
+
+        # Set the registry value
+        Set-ItemProperty -Path $regPath -Name $regProperty -Value $regValue -Type String -Force
+        Write-Host "Successfully set 'LogProtocol' to 'false'" -ForegroundColor Green
+        Write-Log "Successfully set LogProtocol to false" "INFO"
+
+        Write-Host ""
+        Write-Host "Restarting Dualogimap service..." -ForegroundColor Cyan
+        Write-Log "Attempting to restart Dualogimap service" "INFO"
+
+        # Restart the Dualogimap service
+        $service = Get-Service -Name "Dualogimap" -ErrorAction SilentlyContinue
+
+        if ($service) {
+            Write-Host "Service found. Current status: $($service.Status)" -ForegroundColor Gray
+
+            # Stop the service
+            if ($service.Status -eq "Running") {
+                Write-Host "Stopping service..." -ForegroundColor Cyan
+                Stop-Service -Name "Dualogimap" -Force
+                Write-Log "Dualogimap service stopped" "INFO"
+
+                # Wait for service to stop
+                Start-Sleep -Seconds 2
+            }
+
+            # Start the service
+            Write-Host "Starting service..." -ForegroundColor Cyan
+            Start-Service -Name "Dualogimap"
+            Write-Log "Dualogimap service started" "INFO"
+
+            # Verify service status
+            Start-Sleep -Seconds 2
+            $updatedService = Get-Service -Name "Dualogimap"
+
+            if ($updatedService.Status -eq "Running") {
+                Write-Host "Service restarted successfully. Current status: $($updatedService.Status)" -ForegroundColor Green
+                Write-Log "Dualogimap service restarted successfully" "INFO"
+            } else {
+                Write-Host "Service status: $($updatedService.Status)" -ForegroundColor Yellow
+                Write-Log "Dualogimap service status after restart: $($updatedService.Status)" "WARNING"
+            }
+        } else {
+            Write-Host "Warning: Dualogimap service not found." -ForegroundColor Yellow
+            Write-Log "Dualogimap service not found" "WARNING"
+        }
+
+        Write-Host ""
+        Write-Host "========================================" -ForegroundColor Green
+        Write-Host "IMAP Protocol disablement completed!" -ForegroundColor Green
+        Write-Host "========================================" -ForegroundColor Green
+        Write-Log "Disable IMAP Protocol operation completed successfully" "INFO"
+
+    } catch {
+        Write-Log "Error disabling IMAP Protocol: $($_.Exception.Message)" "ERROR"
+        Write-Host ""
+        Write-Host "Error occurred during IMAP Protocol disablement:" -ForegroundColor Red
+        Write-Host $_.Exception.Message -ForegroundColor Red
+        Write-Host ""
+        Write-Host "Please ensure you have Administrator privileges." -ForegroundColor Yellow
+        Write-Log "Disable IMAP Protocol operation failed" "ERROR"
+    }
+
+    $null = Read-Host "Press Enter to return to menu"
+}
+
 function Show-ImapServerToolMenu {
     Clear-Host
     Write-Host "============================================================" -ForegroundColor Cyan
@@ -1585,6 +1892,8 @@ function Show-ImapServerToolMenu {
     Write-Host "  4. Trigger Dualog IMAP Backup" -ForegroundColor White
     Write-Host "  5. Trigger Dualog IMAP Restore" -ForegroundColor White
     Write-Host "  6. Large Files `& Attachments Finder" -ForegroundColor White
+    Write-Host "  7. Enable IMAP Protocol" -ForegroundColor White
+    Write-Host "  8. Disable IMAP Protocol" -ForegroundColor White
     Write-Host ""
     Write-Host "  B. Back to Main Menu" -ForegroundColor Yellow
     Write-Host ""
@@ -1634,6 +1943,18 @@ function Start-ImapServerTool {
                     Write-Log "User selected IMAP Server Tool Option 6: Large Files `& Attachments Finder" "INFO"
                 }
                 Start-LargeFileFinder
+            }
+            "7" {
+                if ($loggingEnabled) {
+                    Write-Log "User selected IMAP Server Tool Option 7: Enable IMAP Protocol" "INFO"
+                }
+                Enable-ImapProtocol
+            }
+            "8" {
+                if ($loggingEnabled) {
+                    Write-Log "User selected IMAP Server Tool Option 8: Disable IMAP Protocol" "INFO"
+                }
+                Disable-ImapProtocol
             }
             "B" {
                 Write-Host "`nReturning to Main Menu..." -ForegroundColor Cyan
@@ -1764,11 +2085,6 @@ function Search-Outlook {
     Write-Host "Please wait (this may take a while)...`n" -ForegroundColor Yellow
     Write-Log ('Starting Outlook search - Mode: {0}, Threshold: {1} MB' -f $(if($searchByMessageSize){"Total Message Size"}else{"Attachment Size"}), $sizeThresholdMB) "INFO"
 
-    # Ask for verbose mode
-    Write-Host "Enable verbose output to see details? (Y/N)" -ForegroundColor Yellow
-    $verboseMode = (Read-Host).ToUpper() -eq "Y"
-    Write-Host ""
-
     try {
         # Create Outlook COM object
         $outlook = New-Object -ComObject Outlook.Application
@@ -1783,7 +2099,7 @@ function Search-Outlook {
 
         # Function to search folder recursively
         function Search-Folder {
-            param($folder, $sizeThreshold, $verbose, $searchByMsg)
+            param($folder, $sizeThreshold, $searchByMsg)
 
             try {
                 Write-Host "`n[Scanning] Folder: $($folder.Name)" -ForegroundColor Cyan
@@ -1833,11 +2149,6 @@ function Search-Outlook {
                                 $messageSize = $item.Size
                             } catch {
                                 continue
-                            }
-
-                            if ($verbose) {
-                                $messageSizeMB = [math]::Round($messageSize / 1048576, 2)
-                                Write-Host "    Email: $subject - Total size: $messageSizeMB MB" -ForegroundColor DarkGray
                             }
 
                             # Check if message size exceeds threshold
@@ -1896,10 +2207,6 @@ function Search-Outlook {
                             }
 
                             if ($attachmentCount -gt 0) {
-                                if ($verbose) {
-                                    Write-Host "    Checking email: $subject ($attachmentCount attachment(s))" -ForegroundColor DarkGray
-                                }
-
                                 for ($i = 1; $i -le $attachmentCount; $i++) {
                                     try {
                                         $attachment = $item.Attachments.Item($i)
@@ -1920,11 +2227,6 @@ function Search-Outlook {
                                             $attachmentSize = $attachment.Size
                                         } catch {
                                             continue
-                                        }
-
-                                        if ($verbose) {
-                                            $sizeInMB = [math]::Round($attachmentSize / 1048576, 2)
-                                            Write-Host "      - $attachmentName : $sizeInMB MB" -ForegroundColor DarkGray
                                         }
 
                                         # Check if size exceeds threshold
@@ -1975,9 +2277,6 @@ function Search-Outlook {
                     }
                     catch {
                         # Error processing this item - skip it
-                        if ($verbose) {
-                            Write-Host "    [WARNING] Could not process item: $($_.Exception.Message)" -ForegroundColor DarkYellow
-                        }
                     }
                 }
 
@@ -1985,7 +2284,7 @@ function Search-Outlook {
 
                 # Search subfolders recursively
                 foreach ($subfolder in $folder.Folders) {
-                    Search-Folder -folder $subfolder -sizeThreshold $sizeThreshold -verbose $verbose -searchByMsg $searchByMsg
+                    Search-Folder -folder $subfolder -sizeThreshold $sizeThreshold -searchByMsg $searchByMsg
                 }
             }
             catch {
@@ -2027,7 +2326,7 @@ function Search-Outlook {
                 foreach ($store in $stores) {
                     Write-Host ('>>> Searching store: ' + $store.DisplayName + ' <<<') -ForegroundColor Magenta
                     $rootFolder = $store.GetRootFolder()
-                    Search-Folder -folder $rootFolder -sizeThreshold $sizeThresholdBytes -verbose $verboseMode -searchByMsg $searchByMessageSize
+                    Search-Folder -folder $rootFolder -sizeThreshold $sizeThresholdBytes -searchByMsg $searchByMessageSize
                 }
             } else {
                 # Search selected mailbox only
@@ -2042,7 +2341,7 @@ function Search-Outlook {
                 Write-Host "============================================================" -ForegroundColor Cyan
                 Write-Log "Searching mailbox: $($selectedStore.DisplayName)" "INFO"
                 $rootFolder = $selectedStore.GetRootFolder()
-                Search-Folder -folder $rootFolder -sizeThreshold $sizeThresholdBytes -verbose $verboseMode -searchByMsg $searchByMessageSize
+                Search-Folder -folder $rootFolder -sizeThreshold $sizeThresholdBytes -searchByMsg $searchByMessageSize
             }
         }
         catch {
@@ -2060,6 +2359,31 @@ function Search-Outlook {
         Write-Host "Total attachments checked: $script:totalAttachmentsChecked" -ForegroundColor White
         Write-Host "Large attachments found: $script:largeAttachmentsFound" -ForegroundColor Yellow
         Write-Host ""
+
+        # Display detailed results table
+        if ($script:results.Count -gt 0) {
+            Write-Host "`n========================================" -ForegroundColor Cyan
+            Write-Host "DETAILED MATCH RESULTS" -ForegroundColor Cyan
+            Write-Host "========================================" -ForegroundColor Cyan
+            Write-Host ""
+
+            # Prepare data for table display
+            $tableData = $script:results | Sort-Object SizeMB -Descending | ForEach-Object {
+                [PSCustomObject]@{
+                    'Subject' = if ($_.Subject.Length -gt 40) { $_.Subject.Substring(0, 37) + "..." } else { $_.Subject }
+                    'From' = if ($_.From.Length -gt 25) { $_.From.Substring(0, 22) + "..." } else { $_.From }
+                    'Attachment/Message' = if ($_.AttachmentName.Length -gt 30) { $_.AttachmentName.Substring(0, 27) + "..." } else { $_.AttachmentName }
+                    'Size (MB)' = $_.SizeMB
+                    'Received' = $_.Received.ToString("yyyy-MM-dd HH:mm")
+                    'Folder' = if ($_.FolderPath.Length -gt 35) { "..." + $_.FolderPath.Substring($_.FolderPath.Length - 32) } else { $_.FolderPath }
+                }
+            }
+
+            # Display as formatted table
+            $tableData | Format-Table -AutoSize
+
+            Write-Host ""
+        }
 
         # Display results
         Write-Host "`n========================================" -ForegroundColor Cyan
@@ -2088,9 +2412,12 @@ function Search-Outlook {
             Write-Host ('Total emails scanned: {0}' -f $script:totalEmails) -ForegroundColor Cyan
             Write-Host ('Total attachments checked: {0}' -f $script:totalAttachmentsChecked) -ForegroundColor Cyan
 
-            # Ask if user wants to delete attachments
+            # Ask if user wants to delete messages
             Write-Host "`n========================================" -ForegroundColor Cyan
-            $deleteChoice = Read-Host "Do you want to delete these attachments? (Y/N)"
+            Write-Host "WARNING: This will permanently delete the entire messages." -ForegroundColor Yellow
+            Write-Host "A backup .pst file will be created before deletion." -ForegroundColor Yellow
+            Write-Host "========================================" -ForegroundColor Cyan
+            $deleteChoice = Read-Host "Do you want to delete these messages and backup as .pst? (Y/N)"
 
             if ($deleteChoice -eq "Y" -or $deleteChoice -eq "y") {
                 # Prompt for backup directory
@@ -2116,57 +2443,192 @@ function Search-Outlook {
                     }
                 }
 
-                # Process each attachment
+                # Process each message - delete and backup as .pst
                 $successCount = 0
                 $failCount = 0
 
-                Write-Host "`nProcessing attachments..." -ForegroundColor Cyan
-                Write-Log "Starting deletion of $($sortedResults.Count) attachments" "INFO"
+                Write-Host "`nProcessing messages..." -ForegroundColor Cyan
+                Write-Log "Starting deletion of $($sortedResults.Count) messages and backup as .pst" "INFO"
 
-                foreach ($result in $sortedResults) {
+                # Create a single PST file for all messages
+                $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+                $pstFileName = "DeletedMessages_${timestamp}.pst"
+                $pstFilePath = Join-Path -Path $backupPath -ChildPath $pstFileName
+
+                Write-Host "`n[CREATING PST] Creating backup archive: $pstFileName" -ForegroundColor Cyan
+                Write-Log "Creating PST archive: $pstFilePath" "INFO"
+
+                try {
+                    # Create PST file using AddStore method
+                    $namespace.AddStore($pstFilePath)
+
+                    # Wait for PST to be added
+                    Start-Sleep -Milliseconds 1000
+
+                    # Find the newly added PST store by path
+                    $pstStore = $null
+                    foreach ($store in $namespace.Stores) {
+                        if ($store.FilePath -eq $pstFilePath) {
+                            $pstStore = $store
+                            break
+                        }
+                    }
+
+                    if ($null -eq $pstStore) {
+                        throw "Failed to locate newly created PST store"
+                    }
+
+                    # Get the root folder of the new PST
+                    $pstRootFolder = $pstStore.GetRootFolder()
+
+                    # Create an "Archived Messages" folder in the PST
+                    $archivedFolder = $pstRootFolder.Folders.Add("Archived Messages")
+
+                    Write-Host "[PST CREATED] Archive ready: $($pstStore.DisplayName)" -ForegroundColor Green
+                    Write-Host "[PST ATTACHED] Archive is now attached to Outlook" -ForegroundColor Green
+                    Write-Host ""
+
+                    # Close any open inspector windows to prevent conflicts
+                    Write-Host "[PREPARING] Closing any open message windows..." -ForegroundColor Cyan
                     try {
-                        $attachment = $result.Attachment
+                        $inspectors = $outlook.Inspectors
+                        $inspectorCount = $inspectors.Count
+                        if ($inspectorCount -gt 0) {
+                            Write-Host "  Found $inspectorCount open window(s), closing..." -ForegroundColor Yellow
+                            for ($i = $inspectorCount; $i -ge 1; $i--) {
+                                try {
+                                    $inspectors.Item($i).Close(0)  # 0 = olDiscard (don't save changes)
+                                } catch {
+                                    # Ignore errors closing individual inspectors
+                                }
+                            }
+                            Start-Sleep -Milliseconds 500
+                            Write-Host "  [OK] Closed open windows" -ForegroundColor Green
+                        } else {
+                            Write-Host "  [OK] No open windows found" -ForegroundColor Green
+                        }
+                    } catch {
+                        Write-Host "  [WARNING] Could not check for open windows: $($_.Exception.Message)" -ForegroundColor Yellow
+                    }
+                    Write-Host ""
+
+                    # Array to track failed messages for final report
+                    $script:failedMessages = @()
+
+                    # Now move all messages to this single PST with retry logic
+                    foreach ($result in $sortedResults) {
                         $item = $result.Item
-                        $fileName = $attachment.FileName
+                        $subject = $result.Subject
+                        $maxRetries = 3
+                        $retryCount = 0
+                        $moveSuccessful = $false
 
-                        # Create a unique filename with timestamp to avoid conflicts
-                        $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-                        $sanitizedSubject = $item.Subject -replace '[\\/:<>|*?""]', '_'
-                        $sanitizedSubject = $sanitizedSubject.Substring(0, [Math]::Min(50, $sanitizedSubject.Length))
-                        $backupFileName = "${timestamp}_${sanitizedSubject}_${fileName}"
-                        $backupFilePath = Join-Path -Path $backupPath -ChildPath $backupFileName
+                        Write-Host "  [MOVING] $subject" -ForegroundColor Cyan
 
-                        # Save attachment to backup location
-                        $attachment.SaveAsFile($backupFilePath)
+                        while ($retryCount -lt $maxRetries -and -not $moveSuccessful) {
+                            try {
+                                # Refresh the item to get latest version
+                                try {
+                                    $item = $namespace.GetItemFromID($item.EntryID)
+                                } catch {
+                                    # If refresh fails, use original item
+                                }
 
-                        # Delete attachment from email
-                        $attachment.Delete()
-                        $item.Save()
+                                # Move the message to the archived folder in PST
+                                $movedItem = $item.Move($archivedFolder)
 
-                        Write-Host "  [OK] Deleted: $fileName (from: $($item.Subject))" -ForegroundColor Green
-                        Write-Log "Deleted attachment: $fileName from email: $($item.Subject)" "SUCCESS"
-                        $successCount++
+                                Write-Host "  [OK] Moved to archive: $subject" -ForegroundColor Green
+                                Write-Log "Moved message to PST: $subject" "SUCCESS"
+                                $successCount++
+                                $moveSuccessful = $true
+                            }
+                            catch {
+                                $retryCount++
+
+                                if ($retryCount -lt $maxRetries) {
+                                    Write-Host "  [RETRY] Attempt $retryCount failed, retrying... ($($_.Exception.Message))" -ForegroundColor Yellow
+                                    Start-Sleep -Milliseconds (500 * $retryCount)  # Incremental delay: 500ms, 1000ms, 1500ms
+                                } else {
+                                    Write-Host "  [FAIL] Could not move message after $maxRetries attempts: $subject" -ForegroundColor Red
+                                    Write-Host "         Error: $($_.Exception.Message)" -ForegroundColor Red
+                                    Write-Log "Failed to move message after $maxRetries attempts: $subject - $($_.Exception.Message)" "ERROR"
+                                    $failCount++
+
+                                    # Add to failed messages list for report
+                                    $script:failedMessages += [PSCustomObject]@{
+                                        Subject = $subject
+                                        From = $result.From
+                                        SizeMB = $result.SizeMB
+                                        Folder = $result.FolderPath
+                                        Error = $_.Exception.Message
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Write-Host ""
+                    Write-Host "[COMPLETE] All messages moved to archive PST" -ForegroundColor Green
+                    Write-Host "[PST LOCATION] $pstFilePath" -ForegroundColor Yellow
+                    Write-Host "[PST STATUS] Archive remains attached to Outlook for easy access" -ForegroundColor Yellow
+                    Write-Log "PST archive created and attached: $pstFilePath" "SUCCESS"
+                }
+                catch {
+                    Write-Host "`n[ERROR] Failed to create PST archive: $($_.Exception.Message)" -ForegroundColor Red
+                    Write-Log "Failed to create PST archive: $($_.Exception.Message)" "ERROR"
+
+                    # Try to clean up partially created PST
+                    try {
+                        foreach ($store in $namespace.Stores) {
+                            if ($store.FilePath -eq $pstFilePath) {
+                                $namespace.RemoveStore($store.GetRootFolder())
+                                Start-Sleep -Milliseconds 500
+                                break
+                            }
+                        }
                     }
                     catch {
-                        Write-Host "  [FAIL] Could not delete: $($result.AttachmentName) - $($_.Exception.Message)" -ForegroundColor Red
-                        Write-Log "Failed to delete attachment: $($result.AttachmentName) - $($_.Exception.Message)" "ERROR"
-                        $failCount++
+                        # Ignore cleanup errors
                     }
                 }
 
                 # Summary
                 Write-Host "`n========================================" -ForegroundColor Cyan
                 Write-Host "Deletion Summary:" -ForegroundColor Cyan
-                Write-Host "  Successfully deleted: $successCount attachment(s)" -ForegroundColor Green
+                Write-Host "  Successfully deleted: $successCount message(s)" -ForegroundColor Green
                 if ($failCount -gt 0) {
-                    Write-Host "  Failed: $failCount attachment(s)" -ForegroundColor Red
+                    Write-Host "  Failed: $failCount message(s)" -ForegroundColor Red
                 }
                 Write-Host "  Backup location: $backupPath" -ForegroundColor Yellow
                 Write-Log "Deletion complete: $successCount successful, $failCount failed" "INFO"
+
+                # Export failed messages report if there are any
+                if ($script:failedMessages.Count -gt 0) {
+                    Write-Host "`n========================================" -ForegroundColor Cyan
+                    Write-Host "FAILED MESSAGES REPORT" -ForegroundColor Red
+                    Write-Host "========================================" -ForegroundColor Cyan
+                    Write-Host ""
+
+                    # Display failed messages table
+                    $script:failedMessages | Format-Table -AutoSize
+
+                    # Export to CSV file
+                    try {
+                        $failedReportPath = Join-Path -Path $backupPath -ChildPath "FailedMessages_${timestamp}.csv"
+                        $script:failedMessages | Export-Csv -Path $failedReportPath -NoTypeInformation
+                        Write-Host "[REPORT EXPORTED] Failed messages saved to:" -ForegroundColor Yellow
+                        Write-Host "  $failedReportPath" -ForegroundColor White
+                        Write-Log "Failed messages report exported: $failedReportPath" "INFO"
+                    } catch {
+                        Write-Host "[WARNING] Could not export failed messages report: $($_.Exception.Message)" -ForegroundColor Yellow
+                    }
+
+                    Write-Host "`nYou can manually move these messages or investigate the errors." -ForegroundColor Yellow
+                }
             }
             else {
-                Write-Host "No attachments were deleted." -ForegroundColor Yellow
-                Write-Log "User chose not to delete attachments" "INFO"
+                Write-Host "No messages were deleted." -ForegroundColor Yellow
+                Write-Log "User chose not to delete messages" "INFO"
             }
         }
 
@@ -2231,6 +2693,26 @@ function Enable-TelnetClient {
     Write-Host ""
     Write-Host "This tool will enable the Telnet Client feature on Windows." -ForegroundColor White
     Write-Host ""
+
+    # Check for Administrator privileges
+    if (-not (Test-AdminPrivileges)) {
+        Write-Host "`nThis operation requires Administrator privileges." -ForegroundColor Yellow
+        Write-Host "Attempting to restart with elevated privileges..." -ForegroundColor Cyan
+        Write-Host ""
+        Start-Sleep -Seconds 2
+
+        $scriptPath = $PSCommandPath
+        $arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`""
+
+        try {
+            Start-Process powershell.exe -ArgumentList $arguments -Verb RunAs -Wait
+            exit
+        } catch {
+            Write-Host "Failed to elevate privileges. Please run PowerShell as Administrator manually." -ForegroundColor Red
+            $null = Read-Host "Press Enter to return to menu"
+            return
+        }
+    }
 
     # Check current status
     try {
