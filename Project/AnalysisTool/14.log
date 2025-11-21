@@ -1,0 +1,206 @@
+S C:\Dualog\DigitalPlatform.Client\DigitalPlatform.Celestial.Client> type C:\Dualog\Connectionsuite\logdir\DualogImapServer_2025_nov_17.log
+type C:\Dualog\Connectionsuite\logdir\DualogImapServer_2025_nov_17.log
+20251117,000321.323 INFO: 31016: ImapLogin: User eng.imo9654579@aesmvsl.com logged in successfully.
+20251117,000353.121 INFO: 31016: ImapLogout: User eng.imo9654579@aesmvsl.com logged out after 31 seconds.
+20251117,000910.408 INFO: 27464: ImapLogin: User imo9654579@aesmvsl.com logged in successfully.
+20251117,000910.440 INFO: 27464: ImapServer::ExecuteImapCommand(): RENAME failed: Error renaming folder "INBOX.IT" to "INBOX.IT    GCC in": IMAP folder already exists (imo9654579@aesmvsl.com/192.168.128.11)
+20251117,000954.210 INFO: 27464: ImapLogout: User imo9654579@aesmvsl.com logged out after 43 seconds.
+20251117,001024.144 INFO: 33444: ImapLogin: User imo9654579@aesmvsl.com logged in successfully.
+20251117,001024.183 INFO: 33444: ImapServer::ExecuteImapCommand(): RENAME failed: Error renaming folder "INBOX.IT" to "INBOX.IT    GCC in": IMAP folder already exists (imo9654579@aesmvsl.com/192.168.128.11)
+20251117,001054.297 INFO: 33444: ImapLogout: User imo9654579@aesmvsl.com logged out after 30 seconds.
+20251117,001445.300 INFO: 20236: ImapLogin: User nav.imo9654579@aesmvsl.com logged in successfully.
+20251117,001534.740 INFO: 20236: ImapLogout: User nav.imo9654579@aesmvsl.com logged out after 49 seconds.
+20251117,001559.349 INFO: 27164: ImapLogin: User choff.imo9654579@aesmvsl.com logged in successfully.
+20251117,001629.976 INFO: 27164: ImapLogout: User choff.imo9654579@aesmvsl.com logged out after 30 seconds.
+20251117,003321.330 INFO: 26292: ImapLogin: User eng.imo9654579@aesmvsl.com logged in successfully.
+20251117,003353.153 INFO: 26292: ImapLogout: User eng.imo9654579@aesmvsl.com logged out after 31 seconds.
+20251117,003910.690 INFO: 28952: ImapLogin: User imo9654579@aesmvsl.com logged in successfully.
+20251117,003910.785 INFO: 28952: ImapServer::ExecuteImapCommand(): RENAME failed: Error renaming folder "INBOX.IT" to "INBOX.IT    GCC in": IMAP folder already exists (imo9654579@aesmvsl.com/192.168.128.11)
+20251117,003940.988 INFO: 28952: ImapLogout: User imo9654579@aesmvsl.com logged out after 30 seconds.
+20251117,004459.054 INFO: 11120: ImapLogin: User nav.imo9654579@aesmvsl.com logged in successfully.
+20251117,004548.555 INFO: 11120: ImapLogout: User nav.imo9654579@aesmvsl.com logged out after 49 seconds.
+20251117,004559.208 INFO: 13596: ImapLogin: User choff.imo9654579@aesmvsl.com logged in successfully.
+20251117,004629.973 INFO: 13596: ImapLogout: User choff.imo9654579@aesmvsl.com logged out after 30 seconds.
+20251117,010221.752 INFO: 13728: ImapBackup::Run(): Event 1 (backup initiated) occurred.
+20251117,010221.752 INFO: 13728: ExecuteBackupJob() start.
+20251117,010221.752 STATUS: 13732: ReportingTread::Run(): IMAP Mail backup operation change state to: 1
+20251117,010222.039 INFO: 13728: RenameInOneBackupFolder(V:\Dualog\Backup) file=V:\Dualog\Backup\ImapMailStore.DUALOGBACKUP.archive
+20251117,010222.039 INFO: 13728: add_zipfilename(V:\Dualog\Backup) fname=ImapMailStore.DUALOGBACKUP0
+20251117,010222.039 INFO: 13728: add_zipfilename(V:\Dualog\Backup) fname=ImapMailStore.DUALOGBACKUP1
+20251117,010222.039 INFO: 13728: add_zipfilename(V:\Dualog\Backup) fname=ImapMailStore.DUALOGBACKUP2
+20251117,010222.039 INFO: 13728: add_zipfilename(V:\Dualog\Backup) fname=ImapMailStore.DUALOGBACKUP3
+20251117,010222.055 INFO: 13728: add_zipfilename() fname=V:\Dualog\Backup\OLD\ImapMailStore.DUALOGBACKUP0
+20251117,010222.055 INFO: 13728: add_zipfilename() fname=V:\Dualog\Backup\OLD\ImapMailStore.DUALOGBACKUP1
+20251117,010222.055 INFO: 13728: add_zipfilename() fname=V:\Dualog\Backup\OLD\ImapMailStore.DUALOGBACKUP2
+20251117,010222.055 INFO: 13728: add_zipfilename() fname=V:\Dualog\Backup\OLD\ImapMailStore.DUALOGBACKUP3
+20251117,010321.558 INFO: 8088: ImapLogin: User eng.imo9654579@aesmvsl.com logged in successfully.
+20251117,010353.440 INFO: 8088: ImapLogout: User eng.imo9654579@aesmvsl.com logged out after 31 seconds.
+20251117,010438.565 INFO: 13728: Get_blobs(arc=0) blobs=2547 of 8234
+20251117,010457.473 INFO: 13728: Get_blobs(arc=1) blobs=1817 of 8234
+20251117,010516.420 INFO: 13728: Get_blobs(arc=2) blobs=1872 of 8234
+20251117,010535.242 INFO: 13728: Get_blobs(arc=3) blobs=1998 of 8234
+20251117,010554.292 INFO: 13728: Get_blobs(arc=0) blobs=2547 of 8234
+20251117,010554.292 INFO: 13728: Adest=V:\Dualog\Backup\dualog_backup_tmp\20251117020222055\0\ size=(2547:8234)
+20251117,010830.959 INFO: 13728: add_zipfilename() fname=\ImapMailStore.DUALOGBACKUP0
+20251117,010835.210 INFO: 13728: ArcFile=V:\Dualog\Backup\ImapMailStore.DUALOGBACKUP.archive
+20251117,010835.210 INFO: 13728: CreateArchiveInfoFile(Archives=4) V:\Dualog\Backup\ImapMailStore.DUALOGBACKUP.archive ok=1
+20251117,010835.210 INFO: 13728: Get_blobs(arc=1) blobs=1817 of 8234
+20251117,010835.210 INFO: 13728: Adest=V:\Dualog\Backup\dualog_backup_tmp\20251117020222055\1\ size=(1817:8234)
+20251117,010911.207 INFO: 32224: ImapLogin: User imo9654579@aesmvsl.com logged in successfully.
+20251117,010911.286 INFO: 32224: ImapServer::ExecuteImapCommand(): RENAME failed: Error renaming folder "INBOX.IT" to "INBOX.IT    GCC in": IMAP folder already exists (imo9654579@aesmvsl.com/192.168.128.11)
+20251117,010941.370 INFO: 32224: ImapLogout: User imo9654579@aesmvsl.com logged out after 30 seconds.
+20251117,011107.320 INFO: 13728: add_zipfilename() fname=\ImapMailStore.DUALOGBACKUP1
+20251117,011111.049 INFO: 13728: ArcFile=V:\Dualog\Backup\ImapMailStore.DUALOGBACKUP.archive
+20251117,011111.049 INFO: 13728: CreateArchiveInfoFile(Archives=4) V:\Dualog\Backup\ImapMailStore.DUALOGBACKUP.archive ok=1
+20251117,011111.049 INFO: 13728: Get_blobs(arc=2) blobs=1872 of 8234
+20251117,011111.049 INFO: 13728: Adest=V:\Dualog\Backup\dualog_backup_tmp\20251117020222055\2\ size=(1872:8234)
+20251117,011352.587 INFO: 13728: add_zipfilename() fname=\ImapMailStore.DUALOGBACKUP2
+20251117,011356.782 INFO: 13728: ArcFile=V:\Dualog\Backup\ImapMailStore.DUALOGBACKUP.archive
+20251117,011356.782 INFO: 13728: CreateArchiveInfoFile(Archives=4) V:\Dualog\Backup\ImapMailStore.DUALOGBACKUP.archive ok=1
+20251117,011356.782 INFO: 13728: Get_blobs(arc=3) blobs=1998 of 8234
+20251117,011356.782 INFO: 13728: Adest=V:\Dualog\Backup\dualog_backup_tmp\20251117020222055\3\ size=(1998:8234)
+20251117,011517.426 INFO: 33076: BlobUtils::StoreInBestStorage(): Directory: C:\Dualog\Mail Store\2025\11\17\1\15\ does not exist. Try to create
+20251117,011517.448 INFO: 33076: ImapAppend: Message added to folder 'Sent Items' with MIF_IMAPMSGINFOLDERID 129482.
+20251117,011518.164 INFO: 18312: ImapLogin: User nav.imo9654579@aesmvsl.com logged in successfully.
+20251117,011559.340 INFO: 26004: ImapLogin: User choff.imo9654579@aesmvsl.com logged in successfully.
+20251117,011604.481 INFO: 13728: add_zipfilename() fname=\ImapMailStore.DUALOGBACKUP3
+20251117,011607.627 INFO: 18312: ImapLogout: User nav.imo9654579@aesmvsl.com logged out after 49 seconds.
+20251117,011607.897 INFO: 13728: ArcFile=V:\Dualog\Backup\ImapMailStore.DUALOGBACKUP.archive
+20251117,011607.897 INFO: 13728: CreateArchiveInfoFile(Archives=4) V:\Dualog\Backup\ImapMailStore.DUALOGBACKUP.archive ok=1
+20251117,011607.897 INFO: 13728: location_results (MakeReports) locations=1 index=0
+20251117,011607.897 INFO: 13728: i=0,ok=1,status=0, arc_ind=3,V:\Dualog\Backup
+20251117,011607.903 INFO: 13728: CreateBackupReport(): Report for IMAP backup stored. ok=1 id=21608000001564
+20251117,011607.903 INFO: 13728: 4 Zip files. Archives= 4
+20251117,011607.903 INFO: 13728: ExecuteBackupJob() end after 826 seconds.
+20251117,011607.903 STATUS: 13732: ReportingTread::Run(): IMAP Mail backup operation change state to: 0
+20251117,011630.171 INFO: 26004: ImapLogout: User choff.imo9654579@aesmvsl.com logged out after 31 seconds.
+20251117,012442.511 INFO: 33504: ImapLogin: User eng.imo9654579@aesmvsl.com logged in successfully.
+20251117,013321.576 INFO: 33780: ImapLogin: User eng.imo9654579@aesmvsl.com logged in successfully.
+20251117,013353.363 INFO: 33780: ImapLogout: User eng.imo9654579@aesmvsl.com logged out after 31 seconds.
+20251117,013917.047 INFO: 31664: ImapLogin: User imo9654579@aesmvsl.com logged in successfully.
+20251117,013917.111 INFO: 31664: ImapServer::ExecuteImapCommand(): RENAME failed: Error renaming folder "INBOX.IT" to "INBOX.IT    GCC in": IMAP folder already exists (imo9654579@aesmvsl.com/192.168.128.11)
+20251117,013949.459 INFO: 31664: ImapLogout: User imo9654579@aesmvsl.com logged out after 32 seconds.
+20251117,014524.587 INFO: 29652: ImapLogin: User nav.imo9654579@aesmvsl.com logged in successfully.
+20251117,014559.330 INFO: 15412: ImapLogin: User choff.imo9654579@aesmvsl.com logged in successfully.
+20251117,014612.842 INFO: 29652: ImapLogout: User nav.imo9654579@aesmvsl.com logged out after 48 seconds.
+20251117,014630.197 INFO: 15412: ImapLogout: User choff.imo9654579@aesmvsl.com logged out after 30 seconds.
+20251117,014802.827 INFO: 33076: BlobUtils::StoreInBestStorage(): Directory: C:\Dualog\Mail Store\2025\11\17\1\48\ does not exist. Try to create
+20251117,014802.858 INFO: 33076: ImapAppend: Message added to folder 'Sent Items' with MIF_IMAPMSGINFOLDERID 129484.
+20251117,014904.325 INFO: 33076: BlobUtils::StoreInBestStorage(): Directory: C:\Dualog\Mail Store\2025\11\17\1\49\ does not exist. Try to create
+20251117,014904.352 INFO: 33076: ImapAppend: Message added to folder 'Sent Items' with MIF_IMAPMSGINFOLDERID 129485.
+20251117,015003.991 INFO: 33076: BlobUtils::StoreInBestStorage(): Directory: C:\Dualog\Mail Store\2025\11\17\1\50\ does not exist. Try to create
+20251117,015004.009 INFO: 33076: ImapAppend: Message added to folder 'Sent Items' with MIF_IMAPMSGINFOLDERID 129487.
+20251117,015006.033 INFO: 33588: ImapLogin: User imo9654579@aesmvsl.com logged in successfully.
+20251117,015036.881 INFO: 33588: ImapLogout: User imo9654579@aesmvsl.com logged out after 30 seconds.
+20251117,015200.387 INFO: 20856: ImapLogin: User imo9654579@aesmvsl.com logged in successfully.
+20251117,015231.241 INFO: 20856: ImapLogout: User imo9654579@aesmvsl.com logged out after 30 seconds.
+20251117,020239.030 INFO: 14732: ImapLogin: User eng.imo9654579@aesmvsl.com logged in successfully.
+20251117,020239.036 INFO: 17840: ImapLogin: User eng.imo9654579@aesmvsl.com logged in successfully.
+20251117,020311.565 INFO: 15776: ImapLogin: User eng.imo9654579@aesmvsl.com logged in successfully.
+20251117,020317.201 INFO: 31472: ImapLogin: User eng.imo9654579@aesmvsl.com logged in successfully.
+20251117,020321.772 INFO: 3076: ImapLogin: User eng.imo9654579@aesmvsl.com logged in successfully.
+20251117,020347.468 INFO: 31472: ImapLogout: User eng.imo9654579@aesmvsl.com logged out after 30 seconds.
+20251117,020353.583 INFO: 3076: ImapLogout: User eng.imo9654579@aesmvsl.com logged out after 31 seconds.
+20251117,020530.289 INFO: 28040: ImapLogin: User eng.imo9654579@aesmvsl.com logged in successfully.
+20251117,020630.462 ERROR: 28040: ImapServer::GetAstringParameter(): Error when receiving literal data. Expecting 1381126 bytes, but only got 1389126.
+20251117,020630.462 INFO: 28040: ImapServer::ExecuteImapCommand(): APPEND failed: Timeout when receiving literal. (eng.imo9654579@aesmvsl.com/192.168.128.108)
+20251117,020917.782 INFO: 21116: ImapLogin: User imo9654579@aesmvsl.com logged in successfully.
+20251117,020917.885 INFO: 21116: ImapServer::ExecuteImapCommand(): RENAME failed: Error renaming folder "INBOX.IT" to "INBOX.IT    GCC in": IMAP folder already exists (imo9654579@aesmvsl.com/192.168.128.11)
+20251117,020930.983 WARNING: 33076: ImapMailStorage::SetInternalDate(): Oracle error: SQL State: HY000; Native Error: 1747; Error Text: [Oracle][ODBC][Ora]ORA-01747: invalid user.table.column, table.column, or column specification
+
+20251117,020930.983 INFO: 33076: ImapServer::ExecuteImapCommand(): UID failed: Unable to store flag: Oracle error (imo9654579@aesmvsl.com/192.168.128.11)
+20251117,020948.546 INFO: 21116: ImapLogout: User imo9654579@aesmvsl.com logged out after 30 seconds.
+20251117,021217.046 WARNING: 33076: ImapMailStorage::SetInternalDate(): Oracle error: SQL State: HY000; Native Error: 1747; Error Text: [Oracle][ODBC][Ora]ORA-01747: invalid user.table.column, table.column, or column specification
+
+20251117,021217.054 INFO: 33076: ImapServer::ExecuteImapCommand(): UID failed: Unable to store flag: Oracle error (imo9654579@aesmvsl.com/192.168.128.11)
+20251117,021526.812 INFO: 16848: ImapLogin: User nav.imo9654579@aesmvsl.com logged in successfully.
+20251117,021559.377 INFO: 30812: ImapLogin: User choff.imo9654579@aesmvsl.com logged in successfully.
+20251117,021604.419 INFO: 16848: ImapLogout: User nav.imo9654579@aesmvsl.com logged out after 37 seconds.
+20251117,021630.068 INFO: 30812: ImapLogout: User choff.imo9654579@aesmvsl.com logged out after 30 seconds.
+20251117,023321.973 INFO: 27724: ImapLogin: User eng.imo9654579@aesmvsl.com logged in successfully.
+20251117,023353.749 INFO: 27724: ImapLogout: User eng.imo9654579@aesmvsl.com logged out after 31 seconds.
+20251117,023918.293 INFO: 28956: ImapLogin: User imo9654579@aesmvsl.com logged in successfully.
+20251117,023919.130 INFO: 28956: ImapServer::ImapRename(): Moved 162 messages from subfolder INBOX.IT    GCC in.Skysails.Reports in to recovery: recover.20251117_033918_INBOX.IT    GCC in.Skysails.Reports in
+20251117,023919.146 INFO: 28956: ImapServer::ImapRename(): Moved subfolder to recovery: INBOX.IT    GCC in.Skysails.Reports in -> recover.20251117_033918_INBOX.IT    GCC in.Skysails.Reports in
+20251117,023919.210 INFO: 28956: ImapServer::ImapRename(): Moved 12 messages from subfolder INBOX.IT    GCC in.Skysails to recovery: recover.20251117_033918_INBOX.IT    GCC in.Skysails
+20251117,023919.210 INFO: 28956: ImapServer::ImapRename(): Moved subfolder to recovery: INBOX.IT    GCC in.Skysails -> recover.20251117_033918_INBOX.IT    GCC in.Skysails
+20251117,023919.257 INFO: 28956: ImapServer::ImapRename(): Moved 5 messages from subfolder INBOX.IT    GCC in.Steelcore app to recovery: recover.20251117_033918_INBOX.IT    GCC in.Steelcore app
+20251117,023919.257 INFO: 28956: ImapServer::ImapRename(): Moved subfolder to recovery: INBOX.IT    GCC in.Steelcore app -> recover.20251117_033918_INBOX.IT    GCC in.Steelcore app
+20251117,023919.446 INFO: 28956: ImapServer::ImapRename(): Moved 44 messages from subfolder INBOX.IT    GCC in.CMS to recovery: recover.20251117_033918_INBOX.IT    GCC in.CMS
+20251117,023919.446 INFO: 28956: ImapServer::ImapRename(): Moved subfolder to recovery: INBOX.IT    GCC in.CMS -> recover.20251117_033918_INBOX.IT    GCC in.CMS
+20251117,023919.489 INFO: 28956: ImapServer::ImapRename(): Moved 4 messages from subfolder INBOX.IT    GCC in.MESPAS Support to recovery: recover.20251117_033918_INBOX.IT    GCC in.MESPAS Support
+20251117,023919.494 INFO: 28956: ImapServer::ImapRename(): Moved subfolder to recovery: INBOX.IT    GCC in.MESPAS Support -> recover.20251117_033918_INBOX.IT    GCC in.MESPAS Support
+20251117,023919.605 INFO: 28956: ImapServer::ImapRename(): Moved 30 messages to recovery folder: recover.20251117_033918_INBOX.IT    GCC in
+20251117,023919.620 INFO: 28956: ImapServer::ImapRename(): Deleted target folder after moving contents to recovery: INBOX.IT    GCC in
+20251117,023919.620 INFO: 28956: ImapServer::ImapRename(): Successfully renamed folder: INBOX.IT -> INBOX.IT    GCC in
+20251117,024253.802 INFO: 33076: ImapLogout: User imo9654579@aesmvsl.com logged out after 25478 seconds.
+20251117,024355.117 INFO: 28956: ImapServer::ImapRename(): Successfully renamed folder: Sent Items.Commops IN -> Sent Items.Commops Out
+20251117,024355.180 INFO: 28956: ImapServer::ImapRename(): Successfully renamed folder: INBOX.AASMPL.04 Catering -> INBOX.AASMPL.05 Catering  IN
+20251117,024355.256 INFO: 28956: ImapServer::ImapRename(): Successfully renamed folder: INBOX.2nd officer IN.ENC ADP AENP -> INBOX.2nd officer IN.ENC ADP AENP DNV
+20251117,024355.292 INFO: 28956: ImapServer::ImapRename(): Successfully renamed folder: Sent Items.2nd Officer.Publications -> Sent Items.2nd Officer.Witherby / Dandocs / C&C Marine
+20251117,024358.117 INFO: 29408: ImapLogin: User imo9654579@aesmvsl.com logged in successfully.
+20251117,024358.612 INFO: 29408: BlobUtils::StoreInBestStorage(): Directory: C:\Dualog\Mail Store\2025\11\17\2\43\ does not exist. Try to create
+20251117,024358.623 INFO: 29408: ImapAppend: Message added to folder 'INBOX.AASMPL.05 Catering  IN' with MIF_IMAPMSGINFOLDERID 129751.
+20251117,024358.702 INFO: 29408: ImapAppend: Message added to folder 'INBOX.AASMPL.05 Catering  IN' with MIF_IMAPMSGINFOLDERID 129752.
+20251117,024358.733 INFO: 29408: ImapAppend: Message added to folder 'INBOX.AASMPL.05 Catering  IN' with MIF_IMAPMSGINFOLDERID 129753.
+20251117,024358.828 INFO: 29408: ImapAppend: Message added to folder 'INBOX.AASMPL.05 Catering  IN' with MIF_IMAPMSGINFOLDERID 129754.
+20251117,024358.955 INFO: 29408: ImapAppend: Message added to folder 'INBOX.AASMPL.05 Catering  IN' with MIF_IMAPMSGINFOLDERID 129755.
+20251117,024359.018 INFO: 29408: ImapAppend: Message added to folder 'INBOX.AASMPL.05 Catering  IN' with MIF_IMAPMSGINFOLDERID 129756.
+20251117,024359.098 INFO: 29408: ImapAppend: Message added to folder 'INBOX.AASMPL.05 Catering  IN' with MIF_IMAPMSGINFOLDERID 129757.
+20251117,024359.161 INFO: 29408: ImapAppend: Message added to folder 'INBOX.AASMPL.05 Catering  IN' with MIF_IMAPMSGINFOLDERID 129758.
+20251117,024359.225 INFO: 29408: ImapAppend: Message added to folder 'INBOX.AASMPL.05 Catering  IN' with MIF_IMAPMSGINFOLDERID 129759.
+20251117,024359.257 INFO: 29408: ImapAppend: Message added to folder 'INBOX.AASMPL.05 Catering  IN' with MIF_IMAPMSGINFOLDERID 129760.
+20251117,024359.320 INFO: 29408: ImapAppend: Message added to folder 'INBOX.AASMPL.05 Catering  IN' with MIF_IMAPMSGINFOLDERID 129761.
+20251117,024359.368 INFO: 29408: ImapAppend: Message added to folder 'INBOX.AASMPL.05 Catering  IN' with MIF_IMAPMSGINFOLDERID 129762.
+20251117,024359.400 INFO: 29408: ImapAppend: Message added to folder 'INBOX.AASMPL.05 Catering  IN' with MIF_IMAPMSGINFOLDERID 129763.
+20251117,024359.448 INFO: 29408: ImapAppend: Message added to folder 'INBOX.AASMPL.05 Catering  IN' with MIF_IMAPMSGINFOLDERID 129764.
+20251117,024359.527 INFO: 29408: ImapAppend: Message added to folder 'INBOX.AASMPL.05 Catering  IN' with MIF_IMAPMSGINFOLDERID 129765.
+20251117,024359.559 INFO: 29408: ImapAppend: Message added to folder 'INBOX.AASMPL.05 Catering  IN' with MIF_IMAPMSGINFOLDERID 129766.
+20251117,024400.068 INFO: 29408: BlobUtils::StoreInBestStorage(): Directory: C:\Dualog\Mail Store\2025\11\17\2\44\ does not exist. Try to create
+20251117,024400.084 INFO: 29408: ImapAppend: Message added to folder 'INBOX.2nd officer IN.ENC ADP AENP DNV' with MIF_IMAPMSGINFOLDERID 129767.
+20251117,024400.193 INFO: 29408: ImapAppend: Message added to folder 'INBOX.2nd officer IN.ENC ADP AENP DNV' with MIF_IMAPMSGINFOLDERID 129768.
+20251117,024400.605 INFO: 29408: ImapAppend: Message added to folder 'INBOX.2nd officer IN.ENC ADP AENP DNV' with MIF_IMAPMSGINFOLDERID 129769.
+20251117,024400.715 INFO: 29408: ImapAppend: Message added to folder 'INBOX.2nd officer IN.ENC ADP AENP DNV' with MIF_IMAPMSGINFOLDERID 129770.
+20251117,024400.816 INFO: 29408: ImapAppend: Message added to folder 'INBOX.2nd officer IN.ENC ADP AENP DNV' with MIF_IMAPMSGINFOLDERID 129771.
+20251117,024400.890 INFO: 29408: ImapAppend: Message added to folder 'INBOX.2nd officer IN.ENC ADP AENP DNV' with MIF_IMAPMSGINFOLDERID 129772.
+20251117,024400.969 INFO: 29408: ImapAppend: Message added to folder 'INBOX.2nd officer IN.ENC ADP AENP DNV' with MIF_IMAPMSGINFOLDERID 129773.
+20251117,024401.081 INFO: 29408: ImapAppend: Message added to folder 'INBOX.2nd officer IN.ENC ADP AENP DNV' with MIF_IMAPMSGINFOLDERID 129774.
+20251117,024401.176 INFO: 29408: ImapAppend: Message added to folder 'INBOX.2nd officer IN.ENC ADP AENP DNV' with MIF_IMAPMSGINFOLDERID 129775.
+20251117,024401.288 INFO: 29408: ImapAppend: Message added to folder 'INBOX.2nd officer IN.ENC ADP AENP DNV' with MIF_IMAPMSGINFOLDERID 129776.
+20251117,024401.398 INFO: 29408: ImapAppend: Message added to folder 'INBOX.2nd officer IN.ENC ADP AENP DNV' with MIF_IMAPMSGINFOLDERID 129777.
+20251117,024401.494 INFO: 29408: ImapAppend: Message added to folder 'INBOX.2nd officer IN.ENC ADP AENP DNV' with MIF_IMAPMSGINFOLDERID 129778.
+20251117,024401.605 INFO: 29408: ImapAppend: Message added to folder 'INBOX.2nd officer IN.ENC ADP AENP DNV' with MIF_IMAPMSGINFOLDERID 129779.
+20251117,024401.732 INFO: 29408: ImapAppend: Message added to folder 'INBOX.2nd officer IN.ENC ADP AENP DNV' with MIF_IMAPMSGINFOLDERID 129780.
+20251117,024401.844 INFO: 29408: ImapAppend: Message added to folder 'INBOX.2nd officer IN.ENC ADP AENP DNV' with MIF_IMAPMSGINFOLDERID 129781.
+20251117,024401.986 INFO: 29408: ImapAppend: Message added to folder 'INBOX.2nd officer IN.ENC ADP AENP DNV' with MIF_IMAPMSGINFOLDERID 129782.
+20251117,024402.111 INFO: 29408: ImapAppend: Message added to folder 'INBOX.2nd officer IN.ENC ADP AENP DNV' with MIF_IMAPMSGINFOLDERID 129783.
+20251117,024402.256 INFO: 29408: ImapAppend: Message added to folder 'INBOX.2nd officer IN.ENC ADP AENP DNV' with MIF_IMAPMSGINFOLDERID 129784.
+20251117,024402.367 INFO: 29408: ImapAppend: Message added to folder 'INBOX.2nd officer IN.ENC ADP AENP DNV' with MIF_IMAPMSGINFOLDERID 129785.
+20251117,024402.517 INFO: 29408: ImapAppend: Message added to folder 'INBOX.2nd officer IN.ENC ADP AENP DNV' with MIF_IMAPMSGINFOLDERID 129786.
+20251117,024402.620 INFO: 29408: ImapAppend: Message added to folder 'INBOX.2nd officer IN.ENC ADP AENP DNV' with MIF_IMAPMSGINFOLDERID 129787.
+20251117,024402.731 INFO: 29408: ImapAppend: Message added to folder 'INBOX.2nd officer IN.ENC ADP AENP DNV' with MIF_IMAPMSGINFOLDERID 129788.
+20251117,024402.826 INFO: 29408: ImapAppend: Message added to folder 'INBOX.2nd officer IN.ENC ADP AENP DNV' with MIF_IMAPMSGINFOLDERID 129789.
+20251117,024402.969 INFO: 29408: ImapAppend: Message added to folder 'INBOX.2nd officer IN.ENC ADP AENP DNV' with MIF_IMAPMSGINFOLDERID 129790.
+20251117,024403.136 INFO: 29408: ImapAppend: Message added to folder 'INBOX.2nd officer IN.ENC ADP AENP DNV' with MIF_IMAPMSGINFOLDERID 129791.
+20251117,024403.397 INFO: 29408: ImapAppend: Message added to folder 'Sent Items.2nd Officer.Witherby / Dandocs / C&C Marine' with MIF_IMAPMSGINFOLDERID 129792.
+20251117,024403.439 INFO: 29408: ImapAppend: Message added to folder 'Sent Items.2nd Officer.Witherby / Dandocs / C&C Marine' with MIF_IMAPMSGINFOLDERID 129793.
+20251117,024403.476 INFO: 29408: ImapAppend: Message added to folder 'Sent Items.2nd Officer.Witherby / Dandocs / C&C Marine' with MIF_IMAPMSGINFOLDERID 129794.
+20251117,024403.508 INFO: 29408: ImapAppend: Message added to folder 'Sent Items.2nd Officer.Witherby / Dandocs / C&C Marine' with MIF_IMAPMSGINFOLDERID 129795.
+20251117,024403.556 INFO: 29408: ImapAppend: Message added to folder 'Sent Items.2nd Officer.Witherby / Dandocs / C&C Marine' with MIF_IMAPMSGINFOLDERID 129796.
+20251117,024403.587 INFO: 29408: ImapAppend: Message added to folder 'Sent Items.2nd Officer.Witherby / Dandocs / C&C Marine' with MIF_IMAPMSGINFOLDERID 129797.
+20251117,024403.666 INFO: 29408: ImapAppend: Message added to folder 'Sent Items.2nd Officer.Witherby / Dandocs / C&C Marine' with MIF_IMAPMSGINFOLDERID 129798.
+20251117,024403.825 INFO: 29408: ImapAppend: Message added to folder 'INBOX.Wellness Well being' with MIF_IMAPMSGINFOLDERID 129799.
+20251117,024449.333 INFO: 29408: ImapLogout: User imo9654579@aesmvsl.com logged out after 51 seconds.
+20251117,024553.535 INFO: 22644: ImapLogin: User nav.imo9654579@aesmvsl.com logged in successfully.
+20251117,024600.288 INFO: 14288: ImapLogin: User choff.imo9654579@aesmvsl.com logged in successfully.
+20251117,024631.132 INFO: 14288: ImapLogout: User choff.imo9654579@aesmvsl.com logged out after 30 seconds.
+20251117,024642.972 INFO: 22644: ImapLogout: User nav.imo9654579@aesmvsl.com logged out after 49 seconds.
+20251117,030322.343 INFO: 25124: ImapLogin: User eng.imo9654579@aesmvsl.com logged in successfully.
+20251117,030354.198 INFO: 25124: ImapLogout: User eng.imo9654579@aesmvsl.com logged out after 31 seconds.
+20251117,030932.382 INFO: 20324: ImapLogin: User imo9654579@aesmvsl.com logged in successfully.
+20251117,031011.046 INFO: 20324: ImapLogout: User imo9654579@aesmvsl.com logged out after 38 seconds.
+20251117,031556.464 INFO: 26000: ImapLogin: User nav.imo9654579@aesmvsl.com logged in successfully.
+20251117,031606.220 INFO: 7860: ImapLogin: User choff.imo9654579@aesmvsl.com logged in successfully.
+20251117,031636.581 INFO: 7860: ImapLogout: User choff.imo9654579@aesmvsl.com logged out after 30 seconds.
+20251117,031639.581 INFO: 26000: ImapLogout: User nav.imo9654579@aesmvsl.com logged out after 43 seconds.
+PS C:\Dualog\DigitalPlatform.Client\DigitalPlatform.Celestial.Client> reate
