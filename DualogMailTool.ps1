@@ -1880,6 +1880,296 @@ function Disable-ImapProtocol {
     $null = Read-Host "Press Enter to return to menu"
 }
 
+# Function to perform Tlist Cleanup
+function Invoke-TlistCleanup {
+    # Check for administrator privileges and auto-elevate if needed
+    if (-not (Test-AdminPrivileges)) {
+        Write-Log "Tlist Cleanup Tool requires administrator privileges, attempting auto-elevation" "INFO"
+        Request-AdminElevation -OptionNumber "9"
+        return
+    }
+
+    Write-Host "`n============================================================" -ForegroundColor Cyan
+    Write-Host "              Tlist Cleanup Tool                           " -ForegroundColor Cyan
+    Write-Host "============================================================" -ForegroundColor Cyan
+
+    Write-Log "Starting Tlist Cleanup Tool" "INFO"
+
+    Write-Host "`n=== About Tlist Cleanup ===" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "The Tlist Cleanup Tool identifies files stuck in the task list that" -ForegroundColor White
+    Write-Host "are causing service issues and performs automated cleanup operations." -ForegroundColor White
+    Write-Host ""
+    Write-Host "This script does the following:" -ForegroundColor Cyan
+    Write-Host "  1. Identifies files stuck in tlist" -ForegroundColor White
+    Write-Host "  2. Creates temporary folder for backup" -ForegroundColor White
+    Write-Host "  3. Stops DualogServiceManager service" -ForegroundColor White
+    Write-Host "  4. Moves stuck tlist files to temporary folder" -ForegroundColor White
+    Write-Host "  5. Restarts DualogServiceManager service" -ForegroundColor White
+    Write-Host ""
+    Write-Host "WARNING: This operation will temporarily stop Dualog services." -ForegroundColor Yellow
+    Write-Host ""
+
+    $null = Read-Host "Press Enter to continue"
+
+    # Confirm before proceeding
+    Write-Host "`nThis will stop DualogServiceManager and move files. Continue?" -ForegroundColor Yellow
+    $confirm = Read-Host "Type 'YES' to confirm"
+
+    if ($confirm -ne "YES") {
+        Write-Log "User cancelled Tlist Cleanup operation" "WARNING"
+        Write-Host "Operation cancelled." -ForegroundColor Yellow
+        $null = Read-Host "Press Enter to return to menu"
+        return
+    }
+
+    Write-Log "User confirmed Tlist Cleanup operation" "INFO"
+
+    try {
+        # Define folder paths
+        $basePath = "C:\Dualog"
+        $tempFolder = "$basePath\temp"
+        $connectionSuitePath = "$basePath\ConnectionSuite"
+
+        $folders = @(
+            "$tempFolder",
+            "$tempFolder\statdir",
+            "$tempFolder\indir",
+            "$tempFolder\outdir",
+            "$tempFolder\tempdir",
+            "$tempFolder\tempdir\outb",
+            "$tempFolder\tempdir\inmc",
+            "$tempFolder\datasync",
+            "$tempFolder\errordir",
+            "$tempFolder\upload",
+            "$tempFolder\smtp",
+            "$tempFolder\smtp\outdir"
+        )
+
+        # Collect stuck files before cleanup
+        $stuckFiles = @()
+
+        # Step 1: Create temporary folders
+        Write-Host "`n=== Step 1: Creating Temporary Folders ===" -ForegroundColor Cyan
+        foreach ($folder in $folders) {
+            if (-not (Test-Path -Path $folder)) {
+                try {
+                    New-Item -ItemType Directory -Path $folder -Force -ErrorAction SilentlyContinue | Out-Null
+                    Write-Host "  Created: $folder" -ForegroundColor Green
+                    Write-Log "Created folder: $folder" "INFO"
+                } catch {
+                    Write-Host "  Warning: Could not create $folder" -ForegroundColor Yellow
+                    Write-Log "Warning: Could not create folder $folder - $($_.Exception.Message)" "WARNING"
+                }
+            } else {
+                Write-Host "  Exists: $folder" -ForegroundColor Gray
+            }
+        }
+
+        # Step 2: Collect files that will be moved
+        Write-Host "`n=== Step 2: Scanning for Stuck Files ===" -ForegroundColor Cyan
+        $moveOperations = @(
+            @{ Source = "$connectionSuitePath\statdir"; Dest = "$tempFolder\statdir"; Label = "statdir" },
+            @{ Source = "$connectionSuitePath\indir"; Dest = "$tempFolder\indir"; Label = "indir" },
+            @{ Source = "$connectionSuitePath\outdir"; Dest = "$tempFolder\outdir"; Label = "outdir" },
+            @{ Source = "$connectionSuitePath\tempdir\outb"; Dest = "$tempFolder\tempdir\outb"; Label = "tempdir\outb" },
+            @{ Source = "$connectionSuitePath\datasync"; Dest = "$tempFolder\datasync"; Label = "datasync" },
+            @{ Source = "$connectionSuitePath\tempdir"; Dest = "$tempFolder\tempdir"; Label = "tempdir" },
+            @{ Source = "$connectionSuitePath\errordir"; Dest = "$tempFolder\errordir"; Label = "errordir" },
+            @{ Source = "$connectionSuitePath\upload"; Dest = "$tempFolder\upload"; Label = "upload" },
+            @{ Source = "$connectionSuitePath\tempdir\inmc"; Dest = "$tempFolder\tempdir\inmc"; Label = "tempdir\inmc" },
+            @{ Source = "$connectionSuitePath\smtp\outdir"; Dest = "$tempFolder\smtp\outdir"; Label = "smtp\outdir" }
+        )
+
+        foreach ($operation in $moveOperations) {
+            if (Test-Path -Path $operation.Source) {
+                # Get only files, exclude folders (inmc, outb, ruby, etc.)
+                $files = Get-ChildItem -Path $operation.Source -File -Force -ErrorAction SilentlyContinue
+                if ($files.Count -gt 0) {
+                    Write-Host "  Found $($files.Count) file(s) in $($operation.Label)" -ForegroundColor Cyan
+                    Write-Log "Found $($files.Count) file(s) in $($operation.Label)" "INFO"
+                    $stuckFiles += $files
+                }
+            }
+        }
+
+        if ($stuckFiles.Count -eq 0) {
+            Write-Host "  No stuck files found." -ForegroundColor Green
+            Write-Log "No stuck files found" "INFO"
+        } else {
+            Write-Host "`nTotal stuck files found: $($stuckFiles.Count)" -ForegroundColor Yellow
+            Write-Log "Total stuck files found: $($stuckFiles.Count)" "WARNING"
+        }
+
+        # Step 3: Stop DualogServiceManager
+        Write-Host "`n=== Step 3: Stopping DualogServiceManager ===" -ForegroundColor Cyan
+        Write-Host "Stopping DualogServiceManager service..." -ForegroundColor Yellow
+        Write-Log "Attempting to stop DualogServiceManager service" "INFO"
+
+        try {
+            $service = Get-Service -Name "DualogServiceManager" -ErrorAction SilentlyContinue
+            if ($service) {
+                if ($service.Status -eq "Running") {
+                    # Attempt graceful stop with timeout
+                    Write-Host "  Attempting graceful shutdown (30 second timeout)..." -ForegroundColor Cyan
+                    Write-Log "Attempting graceful shutdown of DualogServiceManager with 30 second timeout" "INFO"
+
+                    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+                    Stop-Service -Name "DualogServiceManager" -Force -ErrorAction SilentlyContinue
+                    $stopwatch.Stop()
+
+                    # Wait for service to stop
+                    $timeout = 30
+                    $elapsed = 0
+                    while ($elapsed -lt $timeout) {
+                        $currentService = Get-Service -Name "DualogServiceManager" -ErrorAction SilentlyContinue
+                        if ($currentService -and $currentService.Status -eq "Stopped") {
+                            Write-Host "  Service stopped successfully" -ForegroundColor Green
+                            Write-Log "DualogServiceManager service stopped after $elapsed seconds" "SUCCESS"
+                            break
+                        }
+                        Start-Sleep -Milliseconds 500
+                        $elapsed += 0.5
+                    }
+
+                    # Check if service is still running after timeout
+                    $currentService = Get-Service -Name "DualogServiceManager" -ErrorAction SilentlyContinue
+                    if ($currentService -and $currentService.Status -eq "Running") {
+                        Write-Host "  Warning: Service did not stop gracefully within timeout period" -ForegroundColor Yellow
+                        Write-Host "  Attempting to force terminate process..." -ForegroundColor Yellow
+                        Write-Log "Service did not stop within 30 seconds, attempting force kill" "WARNING"
+
+                        # Find and kill the process
+                        try {
+                            $processes = Get-Process -Name "*DualogServiceManager*" -ErrorAction SilentlyContinue
+                            if ($processes) {
+                                foreach ($proc in $processes) {
+                                    Write-Host "    Found process: $($proc.Name) (PID: $($proc.Id))" -ForegroundColor Yellow
+                                    Write-Log "Found DualogServiceManager process: $($proc.Name) (PID: $($proc.Id))" "WARNING"
+
+                                    try {
+                                        Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+                                        Write-Host "    Force terminated process $($proc.Id)" -ForegroundColor Green
+                                        Write-Log "Force terminated DualogServiceManager process $($proc.Id)" "WARNING"
+                                    } catch {
+                                        Write-Host "    Error terminating process: $($_.Exception.Message)" -ForegroundColor Red
+                                        Write-Log "Error force terminating process $($proc.Id): $($_.Exception.Message)" "ERROR"
+                                    }
+                                }
+                                Start-Sleep -Seconds 2
+                            } else {
+                                Write-Host "    No DualogServiceManager process found" -ForegroundColor Gray
+                                Write-Log "No DualogServiceManager process found to terminate" "INFO"
+                            }
+
+                            # Verify service is stopped
+                            $verifyService = Get-Service -Name "DualogServiceManager" -ErrorAction SilentlyContinue
+                            if ($verifyService -and $verifyService.Status -eq "Stopped") {
+                                Write-Host "  Service is now stopped" -ForegroundColor Green
+                                Write-Log "Service confirmed stopped after process termination" "SUCCESS"
+                            } else {
+                                Write-Host "  Service status: $($verifyService.Status)" -ForegroundColor Yellow
+                                Write-Log "Service status after force kill: $($verifyService.Status)" "WARNING"
+                            }
+                        } catch {
+                            Write-Host "    Error during force termination: $($_.Exception.Message)" -ForegroundColor Red
+                            Write-Log "Error during force process termination: $($_.Exception.Message)" "ERROR"
+                        }
+                    }
+                } else {
+                    Write-Host "  Service is not running" -ForegroundColor Gray
+                    Write-Log "DualogServiceManager service is not running" "INFO"
+                }
+            } else {
+                Write-Host "  Warning: DualogServiceManager service not found" -ForegroundColor Yellow
+                Write-Log "DualogServiceManager service not found" "WARNING"
+            }
+        } catch {
+            Write-Host "  Error stopping service: $($_.Exception.Message)" -ForegroundColor Yellow
+            Write-Log "Error stopping DualogServiceManager: $($_.Exception.Message)" "WARNING"
+        }
+
+        # Step 4: Move files
+        Write-Host "`n=== Step 4: Moving Stuck Files ===" -ForegroundColor Cyan
+        $movedCount = 0
+        $errorCount = 0
+
+        foreach ($operation in $moveOperations) {
+            if (Test-Path -Path $operation.Source) {
+                try {
+                    # Get only files, exclude folders
+                    $files = Get-ChildItem -Path $operation.Source -File -Force -ErrorAction SilentlyContinue
+
+                    if ($files.Count -gt 0) {
+                        foreach ($file in $files) {
+                            $destPath = Join-Path -Path $operation.Dest -ChildPath $file.Name
+                            Move-Item -Path $file.FullName -Destination $destPath -Force -ErrorAction SilentlyContinue
+                            Write-Host "  Moved: $($file.Name)" -ForegroundColor Green
+                            $movedCount++
+                        }
+                        Write-Log "Moved $($files.Count) file(s) from $($operation.Label)" "INFO"
+                    }
+                } catch {
+                    Write-Host "  Error moving files from $($operation.Label): $($_.Exception.Message)" -ForegroundColor Red
+                    Write-Log "Error moving files from $($operation.Label): $($_.Exception.Message)" "ERROR"
+                    $errorCount++
+                }
+            }
+        }
+
+        Write-Host "`nFiles moved: $movedCount" -ForegroundColor Cyan
+        if ($errorCount -gt 0) {
+            Write-Host "Errors encountered: $errorCount" -ForegroundColor Yellow
+        }
+        Write-Log "File move operation completed: $movedCount file(s) moved, $errorCount errors" "INFO"
+
+        # Step 5: Start DualogServiceManager
+        Write-Host "`n=== Step 5: Restarting DualogServiceManager ===" -ForegroundColor Cyan
+        Write-Host "Starting DualogServiceManager service..." -ForegroundColor Yellow
+        Write-Log "Attempting to start DualogServiceManager service" "INFO"
+
+        try {
+            $service = Get-Service -Name "DualogServiceManager" -ErrorAction SilentlyContinue
+            if ($service) {
+                Start-Service -Name "DualogServiceManager" -ErrorAction SilentlyContinue
+                Start-Sleep -Seconds 3
+                $serviceStatus = (Get-Service -Name "DualogServiceManager" -ErrorAction SilentlyContinue).Status
+                if ($serviceStatus -eq "Running") {
+                    Write-Host "  Service restarted successfully" -ForegroundColor Green
+                    Write-Log "DualogServiceManager service started" "SUCCESS"
+                } else {
+                    Write-Host "  Warning: Service status is $serviceStatus" -ForegroundColor Yellow
+                    Write-Log "DualogServiceManager service status: $serviceStatus" "WARNING"
+                }
+            }
+        } catch {
+            Write-Host "  Error starting service: $($_.Exception.Message)" -ForegroundColor Yellow
+            Write-Log "Error starting DualogServiceManager: $($_.Exception.Message)" "WARNING"
+        }
+
+        # Summary
+        Write-Host "`n============================================================" -ForegroundColor Cyan
+        Write-Host "              Cleanup Operation Completed                    " -ForegroundColor Cyan
+        Write-Host "============================================================" -ForegroundColor Cyan
+        Write-Host ""
+        Write-Host "Summary:" -ForegroundColor White
+        Write-Host "  Stuck files found: $($stuckFiles.Count)" -ForegroundColor White
+        Write-Host "  Files moved: $movedCount" -ForegroundColor White
+        Write-Host "  Errors: $errorCount" -ForegroundColor $(if ($errorCount -eq 0) { "Green" } else { "Yellow" })
+        Write-Host "  Service status: $(((Get-Service -Name 'DualogServiceManager' -ErrorAction SilentlyContinue).Status))" -ForegroundColor White
+        Write-Host ""
+        Write-Log "Tlist Cleanup operation completed successfully" "SUCCESS"
+
+    } catch {
+        Write-Log "Fatal error during Tlist Cleanup: $($_.Exception.Message)" "ERROR"
+        Write-Host "`nFatal error occurred during Tlist Cleanup:" -ForegroundColor Red
+        Write-Host $_.Exception.Message -ForegroundColor Red
+    }
+
+    Write-Host "`nLog file saved to: $script:logFile" -ForegroundColor Cyan
+    $null = Read-Host "Press Enter to return to menu"
+}
+
 function Show-ImapServerToolMenu {
     Clear-Host
     Write-Host "============================================================" -ForegroundColor Cyan
@@ -1894,6 +2184,7 @@ function Show-ImapServerToolMenu {
     Write-Host "  6. Large Files `& Attachments Finder" -ForegroundColor White
     Write-Host "  7. Enable IMAP Protocol" -ForegroundColor White
     Write-Host "  8. Disable IMAP Protocol" -ForegroundColor White
+    Write-Host "  9. Tlist Cleanup Tool" -ForegroundColor White
     Write-Host ""
     Write-Host "  B. Back to Main Menu" -ForegroundColor Yellow
     Write-Host ""
@@ -1955,6 +2246,12 @@ function Start-ImapServerTool {
                     Write-Log "User selected IMAP Server Tool Option 8: Disable IMAP Protocol" "INFO"
                 }
                 Disable-ImapProtocol
+            }
+            "9" {
+                if ($loggingEnabled) {
+                    Write-Log "User selected IMAP Server Tool Option 9: Tlist Cleanup Tool" "INFO"
+                }
+                Invoke-TlistCleanup
             }
             "B" {
                 Write-Host "`nReturning to Main Menu..." -ForegroundColor Cyan
