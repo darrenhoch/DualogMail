@@ -1,4 +1,4 @@
-﻿@echo off
+@echo off
 setlocal
 
 goto start
@@ -38,7 +38,7 @@ echo          -- Cheking if Ship account exists>>%outFile%
 echo          select usr.usr_userid into folderowner>>%outFile%
 echo          from dv_user usr>>%outFile%
 echo          join dv_vessel ves on usr.ves_vesselid = ves.ves_vesselid>>%outFile%
-echo          where lower(usr.usr_email) like 'ningboexpress%%'>>%outFile%
+echo          where lower(usr.usr_email) like 'imo%%'>>%outFile%
 echo          and nvl(usr.usr_rowstatus,0) = 0;>>%outFile%
 echo          if folderowner is null then>>%outFile%
 echo           return;>>%outFile%
@@ -1068,7 +1068,7 @@ echo          -- Cheking if Ship account exists>>%outFile%
 echo          select usr.usr_userid into folderowner>>%outFile%
 echo          from dv_user usr>>%outFile%
 echo          join dv_vessel ves on usr.ves_vesselid = ves.ves_vesselid>>%outFile%
-echo          where lower(usr.usr_email) like 'master.ningboexpress%%'>>%outFile%
+echo          where lower(usr.usr_email) like 'master.imo%%'>>%outFile%
 echo          and nvl(usr.usr_rowstatus,0) = 0;>>%outFile%
 echo          if folderowner is null then>>%outFile%
 echo           return;>>%outFile%
@@ -1278,7 +1278,7 @@ echo          -- Cheking if Ship account exists>>%outFile%
 echo          select usr.usr_userid into folderowner>>%outFile%
 echo          from dv_user usr>>%outFile%
 echo          join dv_vessel ves on usr.ves_vesselid = ves.ves_vesselid>>%outFile%
-echo          where lower(usr.usr_email) like 'cheng.ningboexpress%%'>>%outFile%
+echo          where lower(usr.usr_email) like 'cheng.imo%%'>>%outFile%
 echo          and nvl(usr.usr_rowstatus,0) = 0;>>%outFile%
 echo          if folderowner is null then>>%outFile%
 echo           return;>>%outFile%
@@ -1939,7 +1939,7 @@ echo          -- Cheking if Ship account exists>>%outFile%
 echo          select usr.usr_userid into folderowner>>%outFile%
 echo          from dv_user usr>>%outFile%
 echo          join dv_vessel ves on usr.ves_vesselid = ves.ves_vesselid>>%outFile%
-echo          where lower(usr.usr_email) like 'deck.ningboexpress%%'>>%outFile%
+echo          where lower(usr.usr_email) like 'deck.imo%%'>>%outFile%
 echo          and nvl(usr.usr_rowstatus,0) = 0;>>%outFile%
 echo          if folderowner is null then>>%outFile%
 echo           return;>>%outFile%
@@ -2559,7 +2559,7 @@ echo          -- Cheking if Engaccount exists>>%outFile%
 echo          select usr.usr_userid into folderowner>>%outFile%
 echo          from dv_user usr>>%outFile%
 echo          join dv_vessel ves on usr.ves_vesselid = ves.ves_vesselid>>%outFile%
-echo          where lower(usr.usr_email) like 'eng.ningboexpress%%'>>%outFile%
+echo          where lower(usr.usr_email) like 'eng.imo%%'>>%outFile%
 echo          and nvl(usr.usr_rowstatus,0) = 0;>>%outFile%
 echo          if folderowner is null then>>%outFile%
 echo           return;>>%outFile%
@@ -2875,4 +2875,3 @@ del /f /q %temp%\ut.sql
 
 endlocal
 exit /b 0
-

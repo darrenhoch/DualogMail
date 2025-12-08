@@ -640,13 +640,15 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $OracleSQLPlusPath = "C:\dualog\oraclexe\app\oracle\product\11.2.0\server\bin\"
 $LogFile = "$env:TEMP\Dualog_AESM_Installer.log"
 $FolderCreationFailed = $false
+$OraclePortConfigFailed = $false
+$ApacheFirewallConfigFailed = $false
 
 # Function to configure firewall ONLY for Apache HTTP Server
 function Add-ApacheFirewallRule {
     Write-Host ""
     Write-Host "Verifying Apache HTTP Server firewall configuration..." -ForegroundColor Cyan
     Write-Log "Verifying and updating Apache firewall rules"
-    
+
     try {
         # Possible Apache installation paths - INCLUDING THE ACTUAL PATH!
         $ApachePaths = @(
@@ -655,10 +657,10 @@ function Add-ApacheFirewallRule {
             "C:\dualog\Apache\Apache\bin\httpd.exe",
             "C:\Program Files\Apache*\bin\httpd.exe"
         )
-        
+
         $ApacheFound = $false
         $ApacheExePath = $null
-        
+
         # Quick check for Apache
         foreach ($Path in $ApachePaths) {
             # Check if path contains wildcard
@@ -681,14 +683,14 @@ function Add-ApacheFirewallRule {
                 $ApacheFound = $true
                 break
             }
-            
+
             if ($ApacheFound) { break }
         }
-        
+
         if ($ApacheFound) {
             Write-Host "✓ Apache HTTP Server found at: $ApacheExePath" -ForegroundColor Green
             Write-Log "Apache HTTP Server found at: $ApacheExePath"
-            
+
             # Create specific program-based rule for the actual executable
             New-NetFirewallRule -DisplayName "Apache HTTP Server - Exact Path (Dualog)" `
                                 -Description "Allow Apache HTTP Server at $ApacheExePath for Dualog Connection Suite" `
@@ -698,18 +700,21 @@ function Add-ApacheFirewallRule {
                                 -Profile Any `
                                 -Enabled True `
                                 -ErrorAction SilentlyContinue | Out-Null
-            
+
             Write-Host "✓ Program-based firewall rule added for Apache executable" -ForegroundColor Green
             Write-Log "Created program-based firewall rule for Apache at: $ApacheExePath"
+            return $true
         }
         else {
-            Write-Host "✓ Port-based firewall rules already configured (Apache not found yet)" -ForegroundColor Green
-            Write-Log "Apache executable not found - port-based rules already in place" -Level Warning
+            Write-Host "⚠ Apache not found yet - will configure after restart" -ForegroundColor Yellow
+            Write-Log "Apache executable not found - will configure firewall after restart" -Level Warning
+            return $false
         }
     }
     catch {
         Write-Log "Error updating Apache firewall rule: $_" -Level Error
-        Write-Host "✓ Port-based firewall rules already configured" -ForegroundColor Green
+        Write-Host "⚠ Apache firewall configuration will retry after restart" -ForegroundColor Yellow
+        return $false
     }
 }
 
@@ -2449,11 +2454,18 @@ Please check the Oracle database connection and retry after system restart.
             Write-Host "⚠ Oracle port configuration timed out - will retry after restart" -ForegroundColor Yellow
             $Process.Kill()
             $ExitCode = -1
+            $OraclePortConfigFailed = $true
         }
         else {
             $ExitCode = $Process.ExitCode
             Write-Log "Oracle HTTP port changer return code (exit code) = $ExitCode"
-            Write-Host "✓ Oracle HTTP port configuration completed" -ForegroundColor Green
+            if ($ExitCode -ne 0) {
+                Write-Host "⚠ Oracle HTTP port configuration completed with warnings (Exit Code: $ExitCode)" -ForegroundColor Yellow
+                $OraclePortConfigFailed = $true
+            }
+            else {
+                Write-Host "✓ Oracle HTTP port configuration completed" -ForegroundColor Green
+            }
         }
         
         Write-Progress -Activity "Post-Installation Configuration" -Status "Oracle configuration completed" -PercentComplete 80
@@ -2461,22 +2473,29 @@ Please check the Oracle database connection and retry after system restart.
     catch {
         Write-Log "Error running Oracle HTTP port changer: $_" -Level Error
         Write-Host "⚠ Error configuring Oracle port (will retry after restart)" -ForegroundColor Yellow
+        $OraclePortConfigFailed = $true
         Write-Progress -Activity "Post-Installation Configuration" -Status "Error in Oracle configuration" -PercentComplete 80
     }
     
     # Return to script directory
     Pop-Location
-    
+
     # Configure Windows Firewall for Apache HTTP Server only
-    Add-ApacheFirewallRule
+    $ApacheConfigSuccess = Add-ApacheFirewallRule
+    if (-not $ApacheConfigSuccess) {
+        $ApacheFirewallConfigFailed = $true
+    }
 }
 else {
     Write-Host "The file sqlplus.exe was not detected in folder $OracleSQLPlusPath" -ForegroundColor Yellow
     Write-Log "The file sqlplus.exe was not detected in folder $OracleSQLPlusPath" -Level Warning
     Write-Progress -Activity "Post-Installation Configuration" -Status "SQLPlus not found - skipping folder creation" -PercentComplete 80
-    
+
     # Still try to configure Apache firewall
-    Add-ApacheFirewallRule
+    $ApacheConfigSuccess = Add-ApacheFirewallRule
+    if (-not $ApacheConfigSuccess) {
+        $ApacheFirewallConfigFailed = $true
+    }
 }
 
 # Create RunOnce registry entries
@@ -2489,29 +2508,65 @@ $OraclePortChangerPath = Join-Path $ScriptDir $OraclePortChangerFile
 $ApacheFirewallScriptPath = Create-ApacheFirewallScript
 
 try {
-    Write-Log "Creating 'runonce' registry entry for '$FolderCreatorPath'"
-    New-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce" `
-                     -Name "CreateAESMFolders" `
-                     -Value "`"$FolderCreatorPath`"" `
-                     -PropertyType String `
-                     -Force | Out-Null
-    
-    Write-Log "Creating 'runonce' registry entry for '$OraclePortChangerPath'"
-    New-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce" `
-                     -Name "ConfigureOracleHTTPPort" `
-                     -Value "`"$OraclePortChangerPath`"" `
-                     -PropertyType String `
-                     -Force | Out-Null
-    
-    Write-Log "Creating 'runonce' registry entry for Apache firewall configuration"
-    New-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce" `
-                     -Name "ConfigureApacheFirewall" `
-                     -Value "powershell.exe -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$ApacheFirewallScriptPath`"" `
-                     -PropertyType String `
-                     -Force | Out-Null
-    
+    # Clean up any old RunOnce entries first
+    $RunOncePath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce"
+    try {
+        Remove-ItemProperty -Path $RunOncePath -Name "CreateAESMFolders" -ErrorAction SilentlyContinue
+        Remove-ItemProperty -Path $RunOncePath -Name "ConfigureOracleHTTPPort" -ErrorAction SilentlyContinue
+        Remove-ItemProperty -Path $RunOncePath -Name "ConfigureApacheFirewall" -ErrorAction SilentlyContinue
+        Write-Log "Cleaned up old RunOnce registry entries"
+    }
+    catch {
+        Write-Log "No old RunOnce entries found to clean up (this is normal)"
+    }
+
+    # Only create folder creation RunOnce task if it failed during installation
+    if ($FolderCreationFailed) {
+        Write-Log "Folder creation failed during installation - Creating 'runonce' registry entry for '$FolderCreatorPath'"
+        New-ItemProperty -Path $RunOncePath `
+                         -Name "CreateAESMFolders" `
+                         -Value "`"$FolderCreatorPath`"" `
+                         -PropertyType String `
+                         -Force | Out-Null
+        Write-Host "  • Folder creation task registered for post-reboot execution" -ForegroundColor Yellow
+    }
+    else {
+        Write-Log "Folder creation succeeded during installation - Skipping RunOnce registry entry"
+        Write-Host "  • Folder creation completed successfully during installation" -ForegroundColor Green
+    }
+
+    # Only create Oracle port config RunOnce task if it failed during installation
+    if ($OraclePortConfigFailed) {
+        Write-Log "Oracle port configuration failed during installation - Creating 'runonce' registry entry for '$OraclePortChangerPath'"
+        New-ItemProperty -Path $RunOncePath `
+                         -Name "ConfigureOracleHTTPPort" `
+                         -Value "`"$OraclePortChangerPath`"" `
+                         -PropertyType String `
+                         -Force | Out-Null
+        Write-Host "  • Oracle HTTP port configuration task registered for post-reboot execution" -ForegroundColor Yellow
+    }
+    else {
+        Write-Log "Oracle port configuration succeeded during installation - Skipping RunOnce registry entry"
+        Write-Host "  • Oracle HTTP port configuration completed successfully during installation" -ForegroundColor Green
+    }
+
+    # Only create Apache firewall RunOnce task if it failed during installation
+    if ($ApacheFirewallConfigFailed) {
+        Write-Log "Apache firewall configuration failed during installation - Creating 'runonce' registry entry for Apache firewall"
+        New-ItemProperty -Path $RunOncePath `
+                         -Name "ConfigureApacheFirewall" `
+                         -Value "powershell.exe -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$ApacheFirewallScriptPath`"" `
+                         -PropertyType String `
+                         -Force | Out-Null
+        Write-Host "  • Apache firewall configuration task registered for post-reboot execution" -ForegroundColor Yellow
+    }
+    else {
+        Write-Log "Apache firewall configuration succeeded during installation - Skipping RunOnce registry entry"
+        Write-Host "  • Apache firewall configuration completed successfully during installation" -ForegroundColor Green
+    }
+
     Write-Host "Registry entries created successfully" -ForegroundColor Green
-    Write-Log "Created RunOnce registry entries including Apache firewall configuration"
+    Write-Log "Created RunOnce registry entries"
     Write-Progress -Activity "Post-Installation Configuration" -Status "Registry entries created" -PercentComplete 100 -Completed
 }
 catch {
@@ -2530,7 +2585,12 @@ Write-Host ""
 Write-Host "  The Dualog Connection Suite Ship software has been successfully installed!" -ForegroundColor White
 Write-Host ""
 Write-Host "  📋 Post-installation tasks have been configured to run after restart:" -ForegroundColor Cyan
-Write-Host "     • Email folder creation" -ForegroundColor White
+if (-not $FolderCreationFailed) {
+    Write-Host "     ✓ Email folder creation - Completed during installation" -ForegroundColor Green
+}
+else {
+    Write-Host "     • Email folder creation - Will retry after restart" -ForegroundColor Yellow
+}
 Write-Host "     • Oracle HTTP port configuration" -ForegroundColor White
 Write-Host "     • Apache HTTP Server firewall configuration" -ForegroundColor White
 Write-Host ""
