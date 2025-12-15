@@ -3257,11 +3257,12 @@ function Send-DeletionSummaryEmail {
         $mailItem.Subject = "Large Messages Cleanup Report - $(Get-Date -Format 'yyyy-MM-dd')"
         $mailItem.BodyFormat = 2  # 2 = olFormatHTML
 
-        # Build HTML body
+        # Build HTML body with proper charset encoding
         $htmlBody = @"
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
     <style>
         body { font-family: Arial, sans-serif; color: #333; }
         h2 { color: #0078d4; border-bottom: 2px solid #0078d4; padding-bottom: 10px; }
@@ -3279,13 +3280,13 @@ function Send-DeletionSummaryEmail {
     </style>
 </head>
 <body>
-    <h2>📧 Large Messages Cleanup Report</h2>
+    <h2>[REPORT] Large Messages Cleanup Report</h2>
 
     <div class="summary">
         <div class="summary-item"><strong>Operation Date:</strong> $operationDate</div>
-        <div class="summary-item"><strong>Mode:</strong> $operationMode Export & Delete</div>
+        <div class="summary-item"><strong>Mode:</strong> $operationMode Export and Delete</div>
         <div class="summary-item"><strong>Backup Location:</strong> $backupLocation</div>
-        <div class="summary-item"><strong>Status:</strong> <span class="success">✓ Completed</span></div>
+        <div class="summary-item"><strong>Status:</strong> <span class="success">[COMPLETED]</span></div>
     </div>
 
     <h2>Summary Statistics</h2>
