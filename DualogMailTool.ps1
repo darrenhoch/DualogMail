@@ -1983,13 +1983,13 @@ function Search-FileSystem {
 
     # Prompt user for file size threshold
     Write-Host ""
-    $sizeInput = Read-Host "Enter minimum file size in MB (press Enter for default: 30 MB)"
+    $sizeInput = Read-Host "Enter minimum file size in MB (press Enter for default: 49 MB)"
 
     $sizeThresholdMB = 0
 
     if ([string]::IsNullOrWhiteSpace($sizeInput)) {
-        $sizeThresholdMB = 30
-        Write-Host "Using default size: 30 MB" -ForegroundColor Gray
+        $sizeThresholdMB = 49
+        Write-Host "Using default size: 49 MB" -ForegroundColor Gray
     } else {
         if (-not [int]::TryParse($sizeInput, [ref]$sizeThresholdMB)) {
             Write-Host "Error: Invalid input. Please enter a valid number." -ForegroundColor Red
@@ -2053,17 +2053,17 @@ function Search-Outlook {
     Write-Host ""
     if ($searchByMessageSize) {
         Write-Host "Searching by TOTAL MESSAGE SIZE (body + attachments)" -ForegroundColor Yellow
-        $sizeInput = Read-Host "Enter minimum message size in MB (press Enter for default: 30 MB)"
+        $sizeInput = Read-Host "Enter minimum message size in MB (press Enter for default: 49 MB)"
     } else {
         Write-Host "Searching by INDIVIDUAL ATTACHMENT SIZE" -ForegroundColor Yellow
-        $sizeInput = Read-Host "Enter minimum attachment size in MB (press Enter for default: 30 MB)"
+        $sizeInput = Read-Host "Enter minimum attachment size in MB (press Enter for default: 49 MB)"
     }
 
     $sizeThresholdMB = 0
 
     if ([string]::IsNullOrWhiteSpace($sizeInput)) {
-        $sizeThresholdMB = 30
-        Write-Host "Using default size: 30 MB" -ForegroundColor Gray
+        $sizeThresholdMB = 49
+        Write-Host "Using default size: 49 MB" -ForegroundColor Gray
     } else {
         if (-not [int]::TryParse($sizeInput, [ref]$sizeThresholdMB)) {
             Write-Host "Error: Invalid input. Please enter a valid number." -ForegroundColor Red
