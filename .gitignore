@@ -1,0 +1,3 @@
+*.exe
+*.dll
+.claude/settings.local.json
