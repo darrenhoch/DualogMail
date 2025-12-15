@@ -2657,66 +2657,185 @@ function Search-Outlook {
         Write-Host "Large attachments found: $script:largeAttachmentsFound" -ForegroundColor Yellow
         Write-Host ""
 
-        # Display detailed results table
+        # Display detailed results in card format
         if ($script:results.Count -gt 0) {
-            Write-Host "`n========================================" -ForegroundColor Cyan
-            Write-Host "DETAILED MATCH RESULTS" -ForegroundColor Cyan
-            Write-Host "========================================" -ForegroundColor Cyan
+            Write-Host "`n============================================================" -ForegroundColor Cyan
+            Write-Host "                  DETAILED MATCH RESULTS                    " -ForegroundColor Cyan
+            Write-Host "============================================================" -ForegroundColor Cyan
             Write-Host ""
+            Write-Host "DEBUG: Found $($script:results.Count) result(s) to display" -ForegroundColor Magenta
+            Write-Host "DEBUG: First result type: $($script:results[0].GetType().Name)" -ForegroundColor Magenta
+            Write-Host "DEBUG: First result SizeMB: $($script:results[0].SizeMB)" -ForegroundColor Magenta
 
-            # Prepare data for table display
-            $tableData = $script:results | Sort-Object SizeMB -Descending | ForEach-Object {
-                [PSCustomObject]@{
-                    'Subject' = if ($_.Subject.Length -gt 40) { $_.Subject.Substring(0, 37) + "..." } else { $_.Subject }
-                    'From' = if ($_.From.Length -gt 25) { $_.From.Substring(0, 22) + "..." } else { $_.From }
-                    'Attachment/Message' = if ($_.AttachmentName.Length -gt 30) { $_.AttachmentName.Substring(0, 27) + "..." } else { $_.AttachmentName }
-                    'Size (MB)' = $_.SizeMB
-                    'Received' = $_.Received.ToString("yyyy-MM-dd HH:mm")
-                    'Folder' = if ($_.FolderPath.Length -gt 35) { "..." + $_.FolderPath.Substring($_.FolderPath.Length - 32) } else { $_.FolderPath }
-                }
+            # Sort results by size descending
+            $sortedResults = @($script:results | Sort-Object SizeMB -Descending)
+            Write-Host "DEBUG: Sorted results count: $($sortedResults.Count)" -ForegroundColor Magenta
+
+            if ($sortedResults.Count -eq 0) {
+                Write-Host "DEBUG: Sort failed! Using unsorted results instead" -ForegroundColor Red
+                $sortedResults = @($script:results)
             }
 
-            # Display as formatted table
-            $tableData | Format-Table -AutoSize
+            # Display each result as a card
+            for ($i = 0; $i -lt $sortedResults.Count; $i++) {
+                $result = $sortedResults[$i]
+                $resultNum = $i + 1
+                Write-Host "DEBUG: Processing result #$resultNum" -ForegroundColor Magenta
 
-            Write-Host ""
+                # Card header with result number and size
+                Write-Host "+-------------------------------------------------------------" -ForegroundColor DarkGray
+                Write-Host "| RESULT #$resultNum" -ForegroundColor White -NoNewline
+                $padding = 37 - $resultNum.ToString().Length
+                Write-Host (" " * $padding) -NoNewline
+                Write-Host "Size: $($result.SizeMB) MB" -ForegroundColor Yellow
+                Write-Host "+-------------------------------------------------------------" -ForegroundColor DarkGray
+
+                # Subject
+                Write-Host "| " -ForegroundColor DarkGray -NoNewline
+                Write-Host "Subject  : " -ForegroundColor Cyan -NoNewline
+                Write-Host $result.Subject -ForegroundColor White
+
+                # From
+                Write-Host "| " -ForegroundColor DarkGray -NoNewline
+                Write-Host "From     : " -ForegroundColor Cyan -NoNewline
+                Write-Host $result.From -ForegroundColor White
+
+                # Received
+                Write-Host "| " -ForegroundColor DarkGray -NoNewline
+                Write-Host "Received : " -ForegroundColor Cyan -NoNewline
+                Write-Host $result.Received.ToString("yyyy-MM-dd HH:mm:ss") -ForegroundColor White
+
+                # File/Attachment
+                Write-Host "| " -ForegroundColor DarkGray -NoNewline
+                Write-Host "File     : " -ForegroundColor Cyan -NoNewline
+                Write-Host $result.AttachmentName -ForegroundColor White
+
+                # Folder
+                Write-Host "| " -ForegroundColor DarkGray -NoNewline
+                Write-Host "Folder   : " -ForegroundColor Cyan -NoNewline
+                Write-Host $result.FolderPath -ForegroundColor Gray
+
+                # Size Analysis Section
+                Write-Host "+-------------------------------------------------------------" -ForegroundColor DarkGray
+                Write-Host "| SIZE ANALYSIS:" -ForegroundColor Yellow
+                Write-Host "+-------------------------------------------------------------" -ForegroundColor DarkGray
+
+                try {
+                    $item = $result.Item
+                    $totalSizeBytes = $item.Size
+                    $totalSizeMB = [math]::Round($totalSizeBytes / 1048576, 2)
+
+                    # Get body size
+                    $bodySize = 0
+                    try {
+                        if ($item.Body) {
+                            $bodySize = [System.Text.Encoding]::UTF8.GetByteCount($item.Body)
+                        }
+                    } catch {}
+
+                    $bodySizeMB = [math]::Round($bodySize / 1048576, 2)
+                    $bodyPercent = if ($totalSizeBytes -gt 0) { [math]::Round(($bodySize / $totalSizeBytes) * 100, 1) } else { 0 }
+
+                    Write-Host "| " -ForegroundColor DarkGray -NoNewline
+                    Write-Host "Message Body    : " -ForegroundColor Gray -NoNewline
+                    Write-Host "$bodySizeMB MB ($bodyPercent%)" -ForegroundColor White
+
+                    # Get attachment details
+                    $attachmentCount = $item.Attachments.Count
+                    if ($attachmentCount -gt 0) {
+                        Write-Host "| " -ForegroundColor DarkGray -NoNewline
+                        Write-Host "Attachments     : " -ForegroundColor Gray -NoNewline
+                        Write-Host "$attachmentCount file(s)" -ForegroundColor White
+
+                        $totalAttachmentSize = 0
+                        for ($j = 1; $j -le $attachmentCount; $j++) {
+                            try {
+                                $attachment = $item.Attachments.Item($j)
+                                $attSize = $attachment.Size
+                                $totalAttachmentSize += $attSize
+                                $attSizeMB = [math]::Round($attSize / 1048576, 2)
+                                $attPercent = if ($totalSizeBytes -gt 0) { [math]::Round(($attSize / $totalSizeBytes) * 100, 1) } else { 0 }
+                                $attName = $attachment.FileName
+
+                                Write-Host "| " -ForegroundColor DarkGray -NoNewline
+                                Write-Host "  [$j] " -ForegroundColor Gray -NoNewline
+                                Write-Host "$attName" -ForegroundColor White -NoNewline
+                                Write-Host " - " -ForegroundColor Gray -NoNewline
+                                Write-Host "$attSizeMB MB ($attPercent%)" -ForegroundColor Yellow
+                            } catch {
+                                Write-Host "| " -ForegroundColor DarkGray -NoNewline
+                                Write-Host "  [$j] Error reading attachment" -ForegroundColor Red
+                            }
+                        }
+
+                        # Show total attachment size
+                        $totalAttachmentMB = [math]::Round($totalAttachmentSize / 1048576, 2)
+                        $attachmentPercent = if ($totalSizeBytes -gt 0) { [math]::Round(($totalAttachmentSize / $totalSizeBytes) * 100, 1) } else { 0 }
+                        Write-Host "| " -ForegroundColor DarkGray -NoNewline
+                        Write-Host "Total Attachments: " -ForegroundColor Gray -NoNewline
+                        Write-Host "$totalAttachmentMB MB ($attachmentPercent%)" -ForegroundColor Cyan
+                    } else {
+                        Write-Host "| " -ForegroundColor DarkGray -NoNewline
+                        Write-Host "Attachments     : " -ForegroundColor Gray -NoNewline
+                        Write-Host "None" -ForegroundColor White
+                    }
+
+                    # Show largest component
+                    Write-Host "| " -ForegroundColor DarkGray
+                    Write-Host "| " -ForegroundColor DarkGray -NoNewline
+                    Write-Host "Recommendation  : " -ForegroundColor Cyan -NoNewline
+                    if ($attachmentCount -eq 0) {
+                        Write-Host "Large email body (no attachments)" -ForegroundColor Yellow
+                    } elseif ($bodyPercent -gt 50) {
+                        Write-Host "Email body is unusually large" -ForegroundColor Yellow
+                    } else {
+                        Write-Host "Size mainly from attachments" -ForegroundColor Green
+                    }
+
+                } catch {
+                    Write-Host "| " -ForegroundColor DarkGray -NoNewline
+                    Write-Host "Unable to analyze message size: $($_.Exception.Message)" -ForegroundColor Red
+                }
+
+                # Card footer
+                Write-Host "+-------------------------------------------------------------" -ForegroundColor DarkGray
+                Write-Host ""
+            }
         }
 
-        # Display results
-        Write-Host "`n========================================" -ForegroundColor Cyan
+        # Display final summary
+        Write-Host ""
         if ($script:results.Count -eq 0) {
             Write-Host "No emails with attachments larger than $sizeThresholdMB MB were found." -ForegroundColor Yellow
             Write-Log "No large attachments found" "INFO"
         } else {
-            Write-Host ('Found {0} attachment(s) larger than {1} MB:' -f $script:results.Count, $sizeThresholdMB) -ForegroundColor Green
             Write-Log ('Found {0} large attachments' -f $script:results.Count) "INFO"
-
-            # Display results with numbering
-            $sortedResults = $script:results | Sort-Object SizeMB -Descending
-            Write-Host ""
-            for ($i = 0; $i -lt $sortedResults.Count; $i++) {
-                $result = $sortedResults[$i]
-                Write-Host ("{0}. Subject: {1}" -f ($i + 1), $result.Subject) -ForegroundColor White
-                Write-Host ("   File: {0} ({1} MB)" -f $result.AttachmentName, $result.SizeMB) -ForegroundColor Gray
-                Write-Host ("   From: {0}" -f $result.From) -ForegroundColor Gray
-                Write-Host ("   Folder: {0}" -f $result.FolderPath) -ForegroundColor Gray
-                Write-Host ""
-            }
 
             # Calculate total size
             $totalSizeMB = ($script:results | Measure-Object -Property SizeMB -Sum).Sum
-            Write-Host ('Total size of large attachments: {0} MB' -f [math]::Round($totalSizeMB, 2)) -ForegroundColor Cyan
+            Write-Host ('Total size of large messages: {0} MB' -f [math]::Round($totalSizeMB, 2)) -ForegroundColor Cyan
             Write-Host ('Total emails scanned: {0}' -f $script:totalEmails) -ForegroundColor Cyan
             Write-Host ('Total attachments checked: {0}' -f $script:totalAttachmentsChecked) -ForegroundColor Cyan
 
             # Ask if user wants to delete messages
             Write-Host "`n========================================" -ForegroundColor Cyan
-            Write-Host "WARNING: This will permanently delete the entire messages." -ForegroundColor Yellow
-            Write-Host "A backup .pst file will be created before deletion." -ForegroundColor Yellow
+            Write-Host "MESSAGE BACKUP & DELETION OPTIONS" -ForegroundColor Cyan
             Write-Host "========================================" -ForegroundColor Cyan
-            $deleteChoice = Read-Host "Do you want to delete these messages and backup as .pst? (Y/N)"
+            Write-Host ""
+            Write-Host "WARNING: These options will permanently delete messages from Outlook." -ForegroundColor Yellow
+            Write-Host "A backup will be created before deletion." -ForegroundColor Yellow
+            Write-Host ""
+            Write-Host "1. Export to PST archive and delete" -ForegroundColor White
+            Write-Host "   (All messages in one .pst file)" -ForegroundColor Gray
+            Write-Host ""
+            Write-Host "2. Export to individual MSG files and delete" -ForegroundColor White
+            Write-Host "   (Each message as separate .msg file)" -ForegroundColor Gray
+            Write-Host ""
+            Write-Host "3. Cancel (do not delete)" -ForegroundColor White
+            Write-Host ""
+            $deleteChoice = Read-Host "Enter your choice (1-3)"
 
-            if ($deleteChoice -eq "Y" -or $deleteChoice -eq "y") {
+            if ($deleteChoice -eq "1") {
                 # Prompt for backup directory
                 $defaultBackupPath = "C:\Dualog\deleteditems"
                 Write-Host "`nDefault backup location: $defaultBackupPath" -ForegroundColor Yellow
@@ -2922,10 +3041,175 @@ function Search-Outlook {
 
                     Write-Host "`nYou can manually move these messages or investigate the errors." -ForegroundColor Yellow
                 }
+
+                # Send deletion summary email to Inbox
+                Write-Host ""
+                Send-DeletionSummaryEmail -outlook $outlook -deletedCount $successCount -failedCount $failCount -deletedItems $sortedResults -failedItems $script:failedMessages -backupLocation $backupPath -operationMode "PST"
+            }
+            elseif ($deleteChoice -eq "2") {
+                # Option 2: Export to MSG files and delete
+                Write-Log "User selected MSG export and delete option" "INFO"
+
+                # Set backup directory
+                $defaultBackupPath = "C:\Dualog\Backup"
+                Write-Host "`nDefault backup location: $defaultBackupPath" -ForegroundColor Yellow
+                $backupPath = Read-Host "Enter backup directory path (press Enter for default)"
+
+                if ([string]::IsNullOrWhiteSpace($backupPath)) {
+                    $backupPath = $defaultBackupPath
+                }
+
+                # Create backup directory if it doesn't exist
+                if (-Not (Test-Path -Path $backupPath)) {
+                    try {
+                        New-Item -ItemType Directory -Path $backupPath -Force | Out-Null
+                        Write-Host "Created backup directory: $backupPath" -ForegroundColor Green
+                        Write-Log "Created backup directory: $backupPath" "INFO"
+                    }
+                    catch {
+                        Write-Host "Error creating backup directory: $($_.Exception.Message)" -ForegroundColor Red
+                        Write-Log "Error creating backup directory: $($_.Exception.Message)" "ERROR"
+                        return
+                    }
+                }
+
+                # Create timestamped subfolder for this batch
+                $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+                $batchFolder = Join-Path -Path $backupPath -ChildPath "DeletedMessages_$timestamp"
+
+                try {
+                    New-Item -ItemType Directory -Path $batchFolder -Force | Out-Null
+                    Write-Host "Created batch folder: $batchFolder" -ForegroundColor Green
+                    Write-Log "Created batch folder: $batchFolder" "INFO"
+                } catch {
+                    Write-Host "Error creating batch folder: $($_.Exception.Message)" -ForegroundColor Red
+                    Write-Log "Error creating batch folder: $($_.Exception.Message)" "ERROR"
+                    return
+                }
+
+                # Process each message - save as MSG and delete
+                $successCount = 0
+                $failCount = 0
+                $script:failedMessages = @()
+
+                Write-Host "`nProcessing messages..." -ForegroundColor Cyan
+                Write-Log "Starting MSG export and deletion of $($sortedResults.Count) messages" "INFO"
+                Write-Host ""
+
+                foreach ($result in $sortedResults) {
+                    $item = $result.Item
+                    $subject = $result.Subject
+
+                    # Sanitize filename (remove invalid characters)
+                    $safeFileName = $subject -replace '[\\/:*?"<>|]', '_'
+                    # Limit filename length to 100 characters
+                    if ($safeFileName.Length -gt 100) {
+                        $safeFileName = $safeFileName.Substring(0, 100)
+                    }
+
+                    # Add timestamp and size to make filename unique
+                    $msgFileName = "${safeFileName}_$($result.SizeMB)MB_${timestamp}.msg"
+                    $msgFilePath = Join-Path -Path $batchFolder -ChildPath $msgFileName
+
+                    Write-Host "  [SAVING] $subject" -ForegroundColor Cyan
+
+                    try {
+                        # Save the message as .msg file
+                        $item.SaveAs($msgFilePath, 3)  # 3 = olMSG format
+
+                        Write-Host "  [SAVED] $msgFileName" -ForegroundColor Green
+                        Write-Log "Saved message as MSG: $msgFileName" "SUCCESS"
+
+                        # Now delete the original message
+                        try {
+                            $item.Delete()
+                            Write-Host "  [DELETED] Removed from Outlook" -ForegroundColor Green
+                            Write-Log "Deleted message from Outlook: $subject" "SUCCESS"
+                            $successCount++
+                        }
+                        catch {
+                            Write-Host "  [WARNING] Saved but could not delete: $($_.Exception.Message)" -ForegroundColor Yellow
+                            Write-Log "Failed to delete message after saving: $subject - $($_.Exception.Message)" "WARNING"
+                            $failCount++
+
+                            $script:failedMessages += [PSCustomObject]@{
+                                Subject = $subject
+                                From = $result.From
+                                SizeMB = $result.SizeMB
+                                Folder = $result.FolderPath
+                                Status = "Saved but not deleted"
+                                Error = $_.Exception.Message
+                            }
+                        }
+                    }
+                    catch {
+                        Write-Host "  [FAIL] Could not save message: $($_.Exception.Message)" -ForegroundColor Red
+                        Write-Log "Failed to save message as MSG: $subject - $($_.Exception.Message)" "ERROR"
+                        $failCount++
+
+                        $script:failedMessages += [PSCustomObject]@{
+                            Subject = $subject
+                            From = $result.From
+                            SizeMB = $result.SizeMB
+                            Folder = $result.FolderPath
+                            Status = "Not saved or deleted"
+                            Error = $_.Exception.Message
+                        }
+                    }
+
+                    Write-Host ""
+                }
+
+                # Summary
+                Write-Host "`n========================================" -ForegroundColor Cyan
+                Write-Host "EXPORT & DELETION SUMMARY" -ForegroundColor Cyan
+                Write-Host "========================================" -ForegroundColor Cyan
+                Write-Host "  Successfully processed: $successCount message(s)" -ForegroundColor Green
+                if ($failCount -gt 0) {
+                    Write-Host "  Failed: $failCount message(s)" -ForegroundColor Red
+                }
+                Write-Host "  Backup location: $batchFolder" -ForegroundColor Yellow
+                Write-Log "MSG export and deletion complete: $successCount successful, $failCount failed" "INFO"
+
+                # Export failed messages report if there are any
+                if ($script:failedMessages.Count -gt 0) {
+                    Write-Host "`n========================================" -ForegroundColor Cyan
+                    Write-Host "FAILED MESSAGES REPORT" -ForegroundColor Red
+                    Write-Host "========================================" -ForegroundColor Cyan
+                    Write-Host ""
+
+                    # Display failed messages table
+                    $script:failedMessages | Format-Table -AutoSize
+
+                    # Export to CSV file
+                    try {
+                        $failedReportPath = Join-Path -Path $batchFolder -ChildPath "FailedMessages.csv"
+                        $script:failedMessages | Export-Csv -Path $failedReportPath -NoTypeInformation
+                        Write-Host "[REPORT EXPORTED] Failed messages saved to:" -ForegroundColor Yellow
+                        Write-Host "  $failedReportPath" -ForegroundColor White
+                        Write-Log "Failed messages report exported: $failedReportPath" "INFO"
+                    } catch {
+                        Write-Host "[WARNING] Could not export failed messages report: $($_.Exception.Message)" -ForegroundColor Yellow
+                    }
+
+                    Write-Host "`nYou can manually process these messages or investigate the errors." -ForegroundColor Yellow
+                }
+
+                Write-Host "`n[COMPLETE] All MSG files saved to: $batchFolder" -ForegroundColor Green
+
+                # Send deletion summary email to Inbox
+                Write-Host ""
+                Send-DeletionSummaryEmail -outlook $outlook -deletedCount $successCount -failedCount $failCount -deletedItems $sortedResults -failedItems $script:failedMessages -backupLocation $batchFolder -operationMode "MSG"
+            }
+            elseif ($deleteChoice -eq "3") {
+                # Option 3: Cancel
+                Write-Host "`nOperation cancelled. No messages were deleted." -ForegroundColor Yellow
+                Write-Log "User cancelled deletion operation" "INFO"
             }
             else {
-                Write-Host "No messages were deleted." -ForegroundColor Yellow
-                Write-Log "User chose not to delete messages" "INFO"
+                # Invalid choice
+                Write-Host "`nInvalid choice. No messages were deleted." -ForegroundColor Red
+                Write-Log "User entered invalid choice for deletion: $deleteChoice" "WARNING"
             }
         }
 
@@ -2943,6 +3227,167 @@ function Search-Outlook {
 
     Write-Host ""
     $null = Read-Host "Press Enter to return to menu"
+}
+
+# Function to send deletion summary email to Outlook Inbox
+function Send-DeletionSummaryEmail {
+    param(
+        $outlook,
+        $deletedCount,
+        $failedCount,
+        $deletedItems,      # Array of deleted messages
+        $failedItems,       # Array of failed messages (if any)
+        $backupLocation,
+        $operationMode      # "PST" or "MSG"
+    )
+
+    try {
+        Write-Host "`n[EMAIL] Creating deletion summary email..." -ForegroundColor Cyan
+        Write-Log "Creating deletion summary email" "INFO"
+
+        # Get the default Outlook folder (Inbox)
+        $namespace = $outlook.GetNamespace("MAPI")
+        $inboxFolder = $namespace.GetDefaultFolder(6)  # 6 = Inbox
+
+        # Create new mail item
+        $mailItem = $outlook.CreateItem(0)  # 0 = olMailItem
+
+        # Set email properties
+        $operationDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+        $mailItem.Subject = "Large Messages Cleanup Report - $(Get-Date -Format 'yyyy-MM-dd')"
+        $mailItem.BodyFormat = 2  # 2 = olFormatHTML
+
+        # Build HTML body
+        $htmlBody = @"
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; color: #333; }
+        h2 { color: #0078d4; border-bottom: 2px solid #0078d4; padding-bottom: 10px; }
+        .summary { background-color: #f0f0f0; padding: 15px; margin: 15px 0; border-left: 4px solid #0078d4; }
+        .summary-item { margin: 8px 0; }
+        .summary-item strong { color: #0078d4; }
+        table { border-collapse: collapse; width: 100%; margin: 15px 0; }
+        th { background-color: #0078d4; color: white; padding: 10px; text-align: left; border: 1px solid #999; }
+        td { padding: 10px; border: 1px solid #ddd; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .success { color: #107c10; }
+        .failed { color: #d83b01; }
+        .timestamp { color: #666; font-size: 12px; }
+        .note { color: #666; font-size: 12px; margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <h2>📧 Large Messages Cleanup Report</h2>
+
+    <div class="summary">
+        <div class="summary-item"><strong>Operation Date:</strong> $operationDate</div>
+        <div class="summary-item"><strong>Mode:</strong> $operationMode Export & Delete</div>
+        <div class="summary-item"><strong>Backup Location:</strong> $backupLocation</div>
+        <div class="summary-item"><strong>Status:</strong> <span class="success">✓ Completed</span></div>
+    </div>
+
+    <h2>Summary Statistics</h2>
+    <div class="summary">
+        <div class="summary-item"><strong>Successfully Deleted:</strong> <span class="success">$deletedCount message(s)</span></div>
+        <div class="summary-item"><strong>Failed:</strong> <span class="failed">$failedCount message(s)</span></div>
+"@
+
+        # Add deleted items table if any
+        if ($deletedItems -and $deletedItems.Count -gt 0) {
+            $htmlBody += @"
+    </div>
+
+    <h2>Deleted Messages</h2>
+    <table>
+        <tr>
+            <th>#</th>
+            <th>Subject</th>
+            <th>From</th>
+            <th>Size (MB)</th>
+            <th>Original Folder</th>
+        </tr>
+"@
+            $counter = 1
+            foreach ($item in $deletedItems) {
+                $htmlBody += @"
+        <tr>
+            <td>$counter</td>
+            <td>$($item.Subject)</td>
+            <td>$($item.From)</td>
+            <td>$($item.SizeMB)</td>
+            <td>$($item.FolderPath)</td>
+        </tr>
+"@
+                $counter++
+            }
+            $htmlBody += "</table>"
+        }
+
+        # Add failed items table if any
+        if ($failedItems -and $failedItems.Count -gt 0) {
+            $htmlBody += @"
+    <h2>Failed Messages</h2>
+    <table>
+        <tr>
+            <th>Subject</th>
+            <th>From</th>
+            <th>Size (MB)</th>
+            <th>Error</th>
+        </tr>
+"@
+            foreach ($item in $failedItems) {
+                $htmlBody += @"
+        <tr>
+            <td>$($item.Subject)</td>
+            <td>$($item.From)</td>
+            <td>$($item.SizeMB)</td>
+            <td class="failed">$($item.Error)</td>
+        </tr>
+"@
+            }
+            $htmlBody += "</table>"
+        }
+
+        $htmlBody += @"
+    <div class="note">
+        <p><strong>Note:</strong> This email was automatically generated by the Dualog Webmail Super Script.</p>
+        <p>Backup files are stored at: <strong>$backupLocation</strong></p>
+"@
+
+        if ($operationMode -eq "PST") {
+            $htmlBody += @"
+        <p>Your deleted messages are archived in a PST file that is currently attached to your Outlook.</p>
+"@
+        } else {
+            $htmlBody += @"
+        <p>Your deleted messages are saved as individual MSG files in the backup directory.</p>
+"@
+        }
+
+        $htmlBody += @"
+    </div>
+</body>
+</html>
+"@
+
+        # Set the HTML body
+        $mailItem.HTMLBody = $htmlBody
+
+        # Save to Inbox (without sending)
+        $mailItem.Move($inboxFolder)
+
+        Write-Host "[EMAIL CREATED] Summary email saved to Inbox" -ForegroundColor Green
+        Write-Log "Deletion summary email created and saved to Inbox" "SUCCESS"
+
+        return $true
+    }
+    catch {
+        Write-Host "[WARNING] Failed to create summary email: $($_.Exception.Message)" -ForegroundColor Yellow
+        Write-Log "Failed to create deletion summary email: $($_.Exception.Message)" "WARNING"
+        return $false
+    }
 }
 
 # Main function for Large Files & Attachments Finder
